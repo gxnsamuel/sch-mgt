@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile Updated{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body p-5">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-4 mb-4">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                </div>
+                <h3 class="fw-bold mb-3">Profile Updated!</h3>
+                <p class="text-muted mb-4">
+                    Your profile information has been updated successfully. 
+                    A confirmation email has been sent to <strong>{{ user.email }}</strong>.
+                </p>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="{% url 'profile' %}" class="btn btn-primary">
+                        <i class="bi bi-person"></i> View Profile
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

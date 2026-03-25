@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure--9bm(6^dlzqeiq-4j^tj@6+s%a=+5w4eaj@glypsrgvv)_0^*q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['dash.localhost', "localhost"]
 
 
 # Application definition
@@ -37,9 +37,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    "django_hosts",
+    "authentication",
+    "academics",
+    "dashboard",
+    "accounts",
 ]
 
 MIDDLEWARE = [
+    'django_hosts.middleware.HostsRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -47,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_hosts.middleware.HostsResponseMiddleware',
 ]
 
 ROOT_URLCONF = 'backend_websystem.urls'
@@ -54,7 +62,9 @@ ROOT_URLCONF = 'backend_websystem.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            BASE_DIR / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -114,4 +124,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
+
 STATIC_URL = 'static/'
+
+
+
+
+AUTH_USER_MODEL = 'authentication.CustomUser'
+
+
+ROOT_HOSTCONF = 'backend_websystem.hosts'
+DEFAULT_HOST = 'www' 

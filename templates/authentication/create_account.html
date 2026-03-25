@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Account{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-7">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
+                                <i class="bi bi-person-plus-fill text-primary" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h3 class="fw-bold">Create Your Account</h3>
+                            <p class="text-muted">Fill in your details to get started</p>
+                        </div>
+                        
+                        <form method="post" action="{% url 'create_account' %}">
+                            {% csrf_token %}
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="first_name" class="form-label fw-semibold">
+                                        First Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="first_name" 
+                                           name="first_name" 
+                                           value="{{ prefill.first_name }}"
+                                           placeholder="John"
+                                           required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="last_name" class="form-label fw-semibold">
+                                        Last Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="last_name" 
+                                           name="last_name" 
+                                           value="{{ prefill.last_name }}"
+                                           placeholder="Doe"
+                                           required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="username" class="form-label fw-semibold">
+                                    Username <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-at"></i></span>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="username" 
+                                           name="username" 
+                                           value="{{ prefill.username }}"
+                                           placeholder="johndoe"
+                                           required>
+                                </div>
+                                <small class="form-text text-muted">Letters, digits, and @/./+/-/_ only</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label fw-semibold">
+                                    Email Address <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" 
+                                           class="form-control" 
+                                           id="email" 
+                                           name="email" 
+                                           value="{{ prefill.email }}"
+                                           placeholder="john.doe@example.com"
+                                           required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="phone_number" class="form-label fw-semibold">
+                                    Phone Number <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
+                                    <input type="tel" 
+                                           class="form-control" 
+                                           id="phone_number" 
+                                           name="phone_number" 
+                                           value="{{ prefill.phone_number }}"
+                                           placeholder="+1234567890"
+                                           required>
+                                </div>
+                                <small class="form-text text-muted">7-15 digits (spaces and hyphens allowed)</small>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="country" class="form-label fw-semibold">
+                                        Country <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="country" name="country" required>
+                                        <option value="">Select country</option>
+                                        {% for country in countries %}
+                                        <option value="{{ country }}" {% if prefill.country == country %}selected{% endif %}>
+                                            {{ country }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="gender" class="form-label fw-semibold">
+                                        Gender <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="gender" name="gender" required>
+                                        <option value="">Select gender</option>
+                                        <option value="male" {% if prefill.gender == 'male' %}selected{% endif %}>Male</option>
+                                        <option value="female" {% if prefill.gender == 'female' %}selected{% endif %}>Female</option>
+                                        <option value="other" {% if prefill.gender == 'other' %}selected{% endif %}>Other</option>
+                                        <option value="prefer_not_to_say" {% if prefill.gender == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-person-plus"></i> Create Account
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-center">
+                            <p class="text-muted mb-2 small">Already have an account?</p>
+                            <a href="{% url 'login' %}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-box-arrow-in-right"></i> Sign In
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

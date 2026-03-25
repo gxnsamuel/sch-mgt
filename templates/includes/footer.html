@@ -1,0 +1,53 @@
+{% load static %}
+{#
+  includes/footer.html
+  Minimal sticky footer that stays at the bottom of .app-main.
+  Keeps a subtle but polished presence without competing with content.
+#}
+
+<footer class="app-footer mt-auto py-3 px-4"
+        style="border-top:1px solid var(--clr-border);
+               background:var(--clr-header);
+               transition:background-color var(--transition),border-color var(--transition);">
+
+  <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
+
+    {# ── Left: copyright ─────────────────────────────────────────────────── #}
+    <p class="mb-0 d-flex align-items-center gap-2" style="font-size:.78rem;color:var(--clr-text-muted);">
+      <span class="d-inline-flex align-items-center justify-content-center rounded-1"
+            style="width:22px;height:22px;background:var(--navy-mid);">
+        <i class="bi bi-mortarboard-fill text-white" style="font-size:.6rem;"></i>
+      </span>
+      <span>
+        &copy; {% now "Y" %}
+        <strong style="color:var(--clr-text);font-weight:700;">SchoolAdmin</strong>
+        &mdash; All rights reserved.
+      </span>
+    </p>
+
+    {# ── Centre: current term indicator ──────────────────────────────────── #}
+    {% if current_term %}
+      <p class="mb-0" style="font-size:.75rem;color:var(--clr-text-muted);">
+        <i class="bi bi-calendar3 me-1" style="color:var(--blue-mid);"></i>
+        Active:
+        <strong style="color:var(--clr-text);">
+          Term {{ current_term.name }}, {{ current_term.academic_year }}
+        </strong>
+      </p>
+    {% endif %}
+
+    {# ── Right: meta links ────────────────────────────────────────────────── #}
+    <p class="mb-0 d-flex align-items-center gap-3" style="font-size:.75rem;">
+      <a href="#" class="text-decoration-none" style="color:var(--clr-text-muted);">Help</a>
+      <span style="color:var(--clr-border);">|</span>
+      <a href="#" class="text-decoration-none" style="color:var(--clr-text-muted);">Privacy</a>
+      <span style="color:var(--clr-border);">|</span>
+      <span style="color:var(--clr-text-muted);">
+        v1.0.0
+        <span class="badge ms-1 rounded-pill" style="background:var(--clr-badge-bg);color:var(--clr-badge-txt);font-size:.62rem;">stable</span>
+      </span>
+    </p>
+
+  </div>
+
+</footer>

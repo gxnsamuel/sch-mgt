@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Subject — {{ subject.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}" class="text-secondary">Subjects</a></li>
+<li class="breadcrumb-item"><a href="{% url 'academics:subject_detail_info' subject.pk %}" class="text-secondary">{{ subject.code }}</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+
+    <div class="card border-danger">
+      <div class="card-header bg-danger-subtle border-danger-subtle py-3">
+        <h5 class="fw-800 mb-0 text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Delete Subject
+        </h5>
+      </div>
+      <div class="card-body">
+
+        <p class="mb-1">You are about to permanently delete:</p>
+        <div class="d-flex align-items-center gap-2 mb-4">
+          <span class="badge bg-dark font-monospace fs-6">{{ subject.code }}</span>
+          <span class="fw-800 fs-5">{{ subject.name }}</span>
+        </div>
+
+        <!-- Impact Summary -->
+        <div class="alert {% if has_marks %}alert-danger{% else %}alert-warning{% endif %} mb-4">
+          <div class="fw-700 mb-2">
+            <i class="bi bi-database me-1"></i> Impact Summary
+          </div>
+          <ul class="mb-0 small">
+            <li>{{ impact.class_assignments }} class assignment{{ impact.class_assignments|pluralize }}</li>
+            <li>{{ impact.teacher_assignments }} teacher assignment{{ impact.teacher_assignments|pluralize }}</li>
+            <li>{{ impact.teaching_records }} teaching record{{ impact.teaching_records|pluralize }}</li>
+            <li>
+              <strong>{{ impact.assessment_marks }} student assessment mark{{ impact.assessment_marks|pluralize }}</strong>
+            </li>
+          </ul>
+        </div>
+
+        {% if has_marks %}
+        <!-- Blocked -->
+        <div class="alert alert-danger">
+          <i class="bi bi-lock-fill me-2"></i>
+          <strong>Cannot delete.</strong> This subject has <strong>{{ impact.assessment_marks }}</strong> student assessment mark{{ impact.assessment_marks|pluralize }} on record.
+          Deactivate it instead to hide it from new assignments.
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Go Back
+          </a>
+          <a href="{% url 'academics:subject_edit' subject.pk %}" class="btn btn-outline-warning">
+            <i class="bi bi-toggle-off me-1"></i> Deactivate Instead
+          </a>
+        </div>
+
+        {% else %}
+        <!-- Confirm delete -->
+        <p class="text-muted small mb-4">
+          This action <strong>cannot be undone</strong>. All related records listed above will also be deleted.
+        </p>
+        <div class="d-flex gap-2">
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash me-1"></i> Yes, Delete Permanently
+            </button>
+          </form>
+          <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

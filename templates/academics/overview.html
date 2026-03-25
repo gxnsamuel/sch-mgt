@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Term {{ term.name }} — {{ term.academic_year }} Overview{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:term_list' %}" class="text-secondary">Terms</a></li>
+<li class="breadcrumb-item active">Term {{ term.name }} — {{ term.academic_year }}</li>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex align-items-start justify-content-between mb-4">
+  <div class="d-flex align-items-center gap-3">
+    <div class="rounded bg-dark text-white d-flex align-items-center justify-content-center fw-800"
+         style="width:52px;height:52px;font-size:1.1rem;">T{{ term.name }}</div>
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h4 class="fw-800 mb-0">Term {{ term.name }} — {{ term.academic_year }}</h4>
+        {% if term.is_current %}
+        <span class="badge bg-success rounded-pill">
+          <i class="bi bi-circle-fill me-1" style="font-size:0.45rem;"></i>Current
+        </span>
+        {% endif %}
+      </div>
+      <div class="text-muted small">
+        {{ term.start_date|date:"d M Y" }} → {{ term.end_date|date:"d M Y" }}
+        {% if term.term_duration_days %} &bull; {{ term.term_duration_days }} days{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'academics:term_edit' term.pk %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    {% if not term.is_current %}
+    <form method="post" action="{% url 'academics:term_set_current' term.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-check-circle me-1"></i>Set Current
+      </button>
+    </form>
+    {% endif %}
+    <a href="{% url 'academics:term_delete' term.pk %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash me-1"></i>Delete
+    </a>
+  </div>
+</div>
+
+<!-- Sub-nav -->
+<ul class="nav nav-tabs mb-4" style="flex-wrap:wrap;">
+  {% for key, label in detail_sections %}
+  <li class="nav-item">
+    <a class="nav-link fw-700 {% if section == key %}active{% else %}text-secondary{% endif %}"
+       href="{% url 'academics:term_detail_'|add:key term.pk %}">{{ label }}</a>
+  </li>
+  {% endfor %}
+</ul>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ student_count|default:"0" }}</div>
+      <div class="stat-label">Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ teacher_count|default:"0" }}</div>
+      <div class="stat-label">Teachers</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ class_count|default:"0" }}</div>
+      <div class="stat-label">Classes</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-info">{{ subject_count|default:"0" }}</div>
+      <div class="stat-label">Subjects</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Term calendar card -->
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i>Term Calendar</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-6 text-muted fw-700 text-uppercase">Opens</dt>
+          <dd class="col-6">{{ term.start_date|date:"d M Y"|default:"—" }}</dd>
+
+          <dt class="col-6 text-muted fw-700 text-uppercase">BOT Exam</dt>
+          <dd class="col-6">
+            {% if term.bot_start_date %}
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                {{ term.bot_start_date|date:"d M" }} – {{ term.bot_end_date|date:"d M" }}
+              </span>
+            {% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-6 text-muted fw-700 text-uppercase">MOT Exam</dt>
+          <dd class="col-6">
+            {% if term.mot_start_date %}
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                {{ term.mot_start_date|date:"d M" }} – {{ term.mot_end_date|date:"d M" }}
+              </span>
+            {% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-6 text-muted fw-700 text-uppercase">Last Lesson</dt>
+          <dd class="col-6">{{ term.end_date|date:"d M Y"|default:"—" }}</dd>
+
+          <dt class="col-6 text-muted fw-700 text-uppercase">EOT Exam</dt>
+          <dd class="col-6">
+            {% if term.eot_start_date %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                {{ term.eot_start_date|date:"d M" }} – {{ term.eot_end_date|date:"d M" }}
+              </span>
+            {% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-6 text-muted fw-700 text-uppercase">Closing</dt>
+          <dd class="col-6">{{ term.closing_date|date:"d M Y"|default:"—" }}</dd>
+
+          {% if term.has_holiday_studies %}
+          <dt class="col-6 text-muted fw-700 text-uppercase">Holiday Studies</dt>
+          <dd class="col-6">
+            <span class="badge bg-success-subtle text-success border border-success-subtle">
+              {{ term.holiday_study_start|date:"d M" }} – {{ term.holiday_study_end|date:"d M" }}
+            </span>
+          </dd>
+          {% endif %}
+
+          <dt class="col-6 text-muted fw-700 text-uppercase">Reopens</dt>
+          <dd class="col-6">{{ term.opening_date|date:"d M Y"|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick links -->
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-lightning me-2 text-warning"></i>Quick Access</h6>
+      </div>
+      <div class="list-group list-group-flush">
+        <a href="{% url 'academics:term_detail_calendar' term.pk %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+          <span class="rounded bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-calendar3"></i></span>
+          <div>
+            <div class="fw-700">Calendar &amp; Events</div>
+            <div class="text-muted small">{{ calendar_events_count|default:"0" }} events this term</div>
+          </div>
+          <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </a>
+        <a href="{% url 'academics:term_detail_fees' term.pk %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+          <span class="rounded bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-cash-stack"></i></span>
+          <div>
+            <div class="fw-700">Fees Structure</div>
+            <div class="text-muted small">{{ fee_structures_count|default:"0" }} fee records</div>
+          </div>
+          <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </a>
+        <a href="{% url 'academics:term_detail_payments' term.pk %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+          <span class="rounded bg-info-subtle text-info d-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-receipt"></i></span>
+          <div>
+            <div class="fw-700">Payments</div>
+            <div class="text-muted small">{{ payments_count|default:"0" }} payments recorded</div>
+          </div>
+          <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </a>
+        <a href="{% url 'academics:term_detail_assessments' term.pk %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+          <span class="rounded bg-warning-subtle text-warning d-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-clipboard-data"></i></span>
+          <div>
+            <div class="fw-700">Assessments</div>
+            <div class="text-muted small">{{ assessments_count|default:"0" }} records</div>
+          </div>
+          <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

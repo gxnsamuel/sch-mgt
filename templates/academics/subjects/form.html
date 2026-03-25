@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}" class="text-secondary">Subjects</a></li>
+{% if action == 'edit' %}
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="text-secondary">{{ subject.code }}</a>
+</li>
+<li class="breadcrumb-item active">Edit</li>
+{% else %}
+<li class="breadcrumb-item active">Add Subject</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      {% if action == 'edit' %}Update the details for this subject.{% else %}Fill in the fields below to create a new subject.{% endif %}
+    </p>
+  </div>
+  {% if action == 'edit' %}
+  <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to Subject
+  </a>
+  {% else %}
+  <a href="{% url 'academics:subject_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to List
+  </a>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-journal-bookmark me-2 text-primary"></i>Subject Details</h6>
+      </div>
+      <div class="card-body">
+
+        <form method="post">
+          {% csrf_token %}
+
+          <!-- Name -->
+          <div class="mb-3">
+            <label class="form-label fw-700">
+              Subject Name <span class="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              class="form-control {% if errors.name %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.name }}{% elif action == 'edit' %}{{ subject.name }}{% endif %}"
+              placeholder="e.g. English Language, Mathematics, Science"
+              maxlength="100"
+            />
+            {% if errors.name %}
+            <div class="invalid-feedback">{{ errors.name }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Code -->
+          <div class="mb-3">
+            <label class="form-label fw-700">
+              Subject Code <span class="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              name="code"
+              class="form-control font-monospace {% if errors.code %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.code }}{% elif action == 'edit' %}{{ subject.code }}{% endif %}"
+              placeholder="e.g. ENG, MAT, SCI, SST"
+              maxlength="10"
+              style="text-transform:uppercase;"
+            />
+            <div class="form-text">Short unique code used on report cards. Max 10 characters.</div>
+            {% if errors.code %}
+            <div class="invalid-feedback">{{ errors.code }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Level -->
+          <div class="mb-3">
+            <label class="form-label fw-700">
+              School Level <span class="text-danger">*</span>
+            </label>
+            <select name="level" class="form-select {% if errors.level %}is-invalid{% endif %}">
+              <option value="">— Select level —</option>
+              {% for key, label in level_choices %}
+              <option value="{{ key }}"
+                {% if post %}
+                  {% if post.level == key %}selected{% endif %}
+                {% elif action == 'edit' %}
+                  {% if subject.level == key %}selected{% endif %}
+                {% endif %}
+              >{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if errors.level %}
+            <div class="invalid-feedback">{{ errors.level }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Description -->
+          <div class="mb-3">
+            <label class="form-label fw-700">Description</label>
+            <textarea
+              name="description"
+              class="form-control"
+              rows="3"
+              placeholder="Brief description of what this subject covers (optional)"
+            >{% if post %}{{ post.description }}{% elif action == 'edit' %}{{ subject.description }}{% endif %}</textarea>
+          </div>
+
+          <!-- Sort Order -->
+          <div class="mb-4">
+            <label class="form-label fw-700">Sort Order</label>
+            <input
+              type="number"
+              name="sort_order"
+              class="form-control {% if errors.sort_order %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.sort_order|default:'0' }}{% elif action == 'edit' %}{{ subject.sort_order }}{% else %}0{% endif %}"
+              min="0" max="9999"
+              style="max-width: 140px;"
+            />
+            <div class="form-text">Controls the display order on report cards. Lower = earlier.</div>
+            {% if errors.sort_order %}
+            <div class="invalid-feedback">{{ errors.sort_order }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Flags -->
+          <div class="mb-4">
+            <div class="form-check form-switch mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="is_compulsory"
+                name="is_compulsory"
+                value="1"
+                {% if post %}
+                  {% if post.is_compulsory %}checked{% endif %}
+                {% elif action == 'edit' %}
+                  {% if subject.is_compulsory %}checked{% endif %}
+                {% else %}
+                  checked
+                {% endif %}
+              />
+              <label class="form-check-label fw-700" for="is_compulsory">
+                Compulsory for all students at this level
+              </label>
+            </div>
+            <div class="form-check form-switch">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="is_active"
+                name="is_active"
+                value="1"
+                {% if post %}
+                  {% if post.is_active %}checked{% endif %}
+                {% elif action == 'edit' %}
+                  {% if subject.is_active %}checked{% endif %}
+                {% else %}
+                  checked
+                {% endif %}
+              />
+              <label class="form-check-label fw-700" for="is_active">Active</label>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-plus-lg{% endif %} me-1"></i>
+              {% if action == 'edit' %}Save Changes{% else %}Create Subject{% endif %}
+            </button>
+            {% if action == 'edit' %}
+            <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="btn btn-outline-secondary">Cancel</a>
+            {% else %}
+            <a href="{% url 'academics:subject_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            {% endif %}
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Help panel -->
+  <div class="col-12 col-lg-4">
+    <div class="card border-primary-subtle">
+      <div class="card-header py-3 bg-primary-subtle">
+        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-info-circle me-2"></i>Field Guide</h6>
+      </div>
+      <div class="card-body small text-secondary">
+        <dl class="mb-0">
+          <dt class="fw-700 text-dark">Subject Name</dt>
+          <dd class="mb-3">Full official name, e.g. <em>English Language</em>, <em>Mathematics</em>, <em>Social Studies (SST)</em>.</dd>
+
+          <dt class="fw-700 text-dark">Code</dt>
+          <dd class="mb-3">Unique short code printed on report cards. E.g. <code>ENG</code>, <code>MAT</code>, <code>SCI</code>, <code>SST</code>, <code>CRE</code>.</dd>
+
+          <dt class="fw-700 text-dark">Level</dt>
+          <dd class="mb-3">Determines which classes this subject appears in. Use <strong>All Levels</strong> for cross-cutting subjects.</dd>
+
+          <dt class="fw-700 text-dark">Sort Order</dt>
+          <dd class="mb-0">Subjects with lower numbers appear first on report cards. Set <code>0</code> for the first subject.</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

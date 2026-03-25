@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar — Term {{ term.name }} {{ term.academic_year }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:term_list' %}" class="text-secondary">Terms</a></li>
+<li class="breadcrumb-item"><a href="{% url 'academics:term_detail_overview' term.pk %}" class="text-secondary">Term {{ term.name }} — {{ term.academic_year }}</a></li>
+<li class="breadcrumb-item active">Calendar</li>
+{% endblock %}
+
+{% block content %}
+{% include "academics/terms/detail/_term_header.html" %}
+
+<!-- Exam windows summary -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="stat-card border-primary-subtle">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-primary">BOT</span>
+        <span class="stat-label">Beginning of Term</span>
+      </div>
+      {% if term.bot_start_date %}
+      <div class="fw-700">{{ term.bot_start_date|date:"d M" }} – {{ term.bot_end_date|date:"d M Y" }}</div>
+      {% else %}<div class="text-muted small">Not set</div>{% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="stat-card border-warning-subtle">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-warning text-dark">MOT</span>
+        <span class="stat-label">Middle of Term</span>
+      </div>
+      {% if term.mot_start_date %}
+      <div class="fw-700">{{ term.mot_start_date|date:"d M" }} – {{ term.mot_end_date|date:"d M Y" }}</div>
+      {% else %}<div class="text-muted small">Not set</div>{% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="stat-card border-danger-subtle">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-danger">EOT</span>
+        <span class="stat-label">End of Term</span>
+      </div>
+      {% if term.eot_start_date %}
+      <div class="fw-700">{{ term.eot_start_date|date:"d M" }} – {{ term.eot_end_date|date:"d M Y" }}</div>
+      {% else %}<div class="text-muted small">Not set</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Events filter + list -->
+<div class="card">
+  <div class="card-header py-3 d-flex align-items-center justify-content-between">
+    <h6 class="fw-700 mb-0"><i class="bi bi-calendar-event me-2 text-primary"></i>School Events</h6>
+    <form method="get" class="d-flex gap-2 align-items-center">
+      <select class="form-select form-select-sm" name="event_type" style="width:auto;">
+        <option value="">All Types</option>
+        {% for key, label in event_types %}
+        <option value="{{ key }}" {% if event_type_filter == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if event_type_filter %}
+      <a href="{% url 'academics:term_detail_calendar' term.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if events %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Event</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+        <tr>
+          <td class="fw-700">{{ event.title }}</td>
+          <td>
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+              {{ event.get_event_type_display }}
+            </span>
+          </td>
+          <td class="text-muted">{{ event.date|date:"d M Y" }}</td>
+          <td class="text-muted small">{{ event.description|truncatechars:80|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between">
+    <small class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&event_type={{ event_type_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&event_type={{ event_type_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700">No events found</div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

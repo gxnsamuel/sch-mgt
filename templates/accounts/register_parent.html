@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}Register Parent{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'accounts:user_list' %}" class="text-secondary">Users</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Register Parent</li>
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════════
+   PAGE HEADER
+══════════════════════════════════════════════════════════════ #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      The parent will log in using their auto-generated Parent ID and password.
+    </p>
+  </div>
+  <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Users
+  </a>
+</div>
+
+{# ══════════════════════════════════════════════════════════════
+   PARENT ID PREVIEW BANNER
+   preview_id  — generated in GET, shown as read-only hint
+══════════════════════════════════════════════════════════════ #}
+{% if preview_id %}
+<div class="alert alert-primary d-flex align-items-center gap-3 mb-4 border border-primary-subtle">
+  <i class="bi bi-info-circle-fill fs-5 text-primary flex-shrink-0"></i>
+  <div>
+    <span class="fw-700">Parent ID preview: </span>
+    <code class="fs-6 fw-800">{{ preview_id }}</code>
+    <span class="text-muted small ms-2">— The final ID is assigned at save time.</span>
+  </div>
+</div>
+{% endif %}
+
+<form method="post" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+
+  {# ════════════════════════════ LEFT COLUMN ════════════════════════════ #}
+  <div class="col-12 col-lg-8">
+
+    {# ── SECTION 1: Personal Information ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-person-circle me-2 text-primary"></i>Personal Information
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              First Name <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="first_name"
+              class="form-control {% if errors.first_name %}is-invalid{% endif %}"
+              value="{{ post.first_name|default:'' }}"
+              placeholder="e.g. Sarah" maxlength="50"/>
+            {% if errors.first_name %}
+            <div class="invalid-feedback">{{ errors.first_name }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              Last Name <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="last_name"
+              class="form-control {% if errors.last_name %}is-invalid{% endif %}"
+              value="{{ post.last_name|default:'' }}"
+              placeholder="e.g. Namukasa" maxlength="50"/>
+            {% if errors.last_name %}
+            <div class="invalid-feedback">{{ errors.last_name }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Other Names</label>
+            <input type="text" name="other_names"
+              class="form-control"
+              value="{{ post.other_names|default:'' }}"
+              placeholder="Middle / other names" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Gender <span class="text-danger">*</span>
+            </label>
+            <select name="gender"
+              class="form-select {% if errors.gender %}is-invalid{% endif %}">
+              <option value="">— Select —</option>
+              <option value="male"              {% if post.gender == 'male' %}selected{% endif %}>Male</option>
+              <option value="female"            {% if post.gender == 'female' %}selected{% endif %}>Female</option>
+              <option value="other"             {% if post.gender == 'other' %}selected{% endif %}>Other</option>
+              <option value="prefer_not_to_say" {% if post.gender == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
+            </select>
+            {% if errors.gender %}
+            <div class="invalid-feedback">{{ errors.gender }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">NIN (National ID)</label>
+            <input type="text" name="nin"
+              class="form-control font-monospace"
+              value="{{ post.nin|default:'' }}"
+              placeholder="e.g. CM9000000HDKQ" maxlength="20"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 2: Contact Details ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-telephone me-2 text-success"></i>Contact Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Phone <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-light">
+                <i class="bi bi-phone text-secondary"></i>
+              </span>
+              <input type="tel" name="phone"
+                class="form-control {% if errors.phone %}is-invalid{% endif %}"
+                value="{{ post.phone|default:'' }}"
+                placeholder="+256 700 000 000" maxlength="15"/>
+              {% if errors.phone %}
+              <div class="invalid-feedback">{{ errors.phone }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Alt. Phone</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light">
+                <i class="bi bi-phone text-secondary"></i>
+              </span>
+              <input type="tel" name="alt_phone"
+                class="form-control"
+                value="{{ post.alt_phone|default:'' }}"
+                placeholder="+256 700 000 000" maxlength="15"/>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Email</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light">
+                <i class="bi bi-envelope text-secondary"></i>
+              </span>
+              <input type="email" name="email"
+                class="form-control {% if errors.email %}is-invalid{% endif %}"
+                value="{{ post.email|default:'' }}"
+                placeholder="parent@example.com" maxlength="254"/>
+              {% if errors.email %}
+              <div class="invalid-feedback">{{ errors.email }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Home Address</label>
+            <input type="text" name="address"
+              class="form-control"
+              value="{{ post.address|default:'' }}"
+              placeholder="Plot / village / street" maxlength="200"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 3: Guardian / Relationship ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-heart me-2 text-danger"></i>Guardian Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Relationship to Student <span class="text-danger">*</span>
+            </label>
+            <select name="relationship"
+              class="form-select {% if errors.relationship %}is-invalid{% endif %}">
+              <option value="">— Select —</option>
+              {% for key, label in relationship_choices %}
+              <option value="{{ key }}"
+                {% if post.relationship == key %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.relationship %}
+            <div class="invalid-feedback">{{ errors.relationship }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Occupation</label>
+            <input type="text" name="occupation"
+              class="form-control"
+              value="{{ post.occupation|default:'' }}"
+              placeholder="e.g. Teacher, Farmer, Business" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Employer / Company</label>
+            <input type="text" name="employer"
+              class="form-control"
+              value="{{ post.employer|default:'' }}"
+              placeholder="Employer or business name" maxlength="200"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Work Phone</label>
+            <input type="tel" name="work_phone"
+              class="form-control"
+              value="{{ post.work_phone|default:'' }}"
+              placeholder="+256 700 000 000" maxlength="15"/>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Work Address</label>
+            <textarea name="work_address" class="form-control" rows="2"
+              placeholder="Office address or place of work"
+            >{{ post.work_address|default:'' }}</textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 4: Uganda Location ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-geo-alt me-2 text-warning"></i>Uganda Location
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">District</label>
+            <input type="text" name="district"
+              class="form-control"
+              value="{{ post.district|default:'' }}"
+              placeholder="e.g. Kampala" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Sub-County</label>
+            <input type="text" name="sub_county"
+              class="form-control"
+              value="{{ post.sub_county|default:'' }}"
+              placeholder="e.g. Makindye" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Village</label>
+            <input type="text" name="village"
+              class="form-control"
+              value="{{ post.village|default:'' }}"
+              placeholder="e.g. Kibuli" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Religion</label>
+            <input type="text" name="religion"
+              class="form-control"
+              value="{{ post.religion|default:'' }}"
+              placeholder="e.g. Catholic, Muslim, Pentecostal" maxlength="50"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 5: Emergency Contact ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-shield-exclamation me-2 text-danger"></i>Emergency Contact
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-5">
+            <label class="form-label fw-700 small">Contact Name</label>
+            <input type="text" name="emergency_contact_name"
+              class="form-control"
+              value="{{ post.emergency_contact_name|default:'' }}"
+              placeholder="Full name" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Contact Phone</label>
+            <input type="tel" name="emergency_contact_phone"
+              class="form-control"
+              value="{{ post.emergency_contact_phone|default:'' }}"
+              placeholder="+256 700 000 000" maxlength="15"/>
+          </div>
+
+          <div class="col-12 col-sm-3">
+            <label class="form-label fw-700 small">Relationship</label>
+            <input type="text" name="emergency_contact_rel"
+              class="form-control"
+              value="{{ post.emergency_contact_rel|default:'' }}"
+              placeholder="e.g. Spouse" maxlength="50"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 6: Notes ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-journal-text me-2 text-secondary"></i>Internal Notes
+        </h6>
+      </div>
+      <div class="card-body">
+        <textarea name="notes" class="form-control" rows="3"
+          placeholder="Any internal notes about this parent (not shown to the parent)."
+        >{{ post.notes|default:'' }}</textarea>
+      </div>
+    </div>
+
+    {# ── SECTION 7: Account / Login ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-key me-2 text-info"></i>Login Credentials
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info border border-info-subtle py-2 small mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          The parent's <strong>username</strong> will be their auto-generated Parent ID
+          (e.g. <code>PAR20250001</code>). Set a temporary password below — the parent
+          should change it on first login.
+        </div>
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Password <span class="text-danger">*</span>
+            </label>
+            <input type="password" name="password"
+              class="form-control {% if errors.password %}is-invalid{% endif %}"
+              placeholder="Temporary password" autocomplete="new-password"/>
+            {% if errors.password %}
+            <div class="invalid-feedback">{{ errors.password }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Confirm Password <span class="text-danger">*</span>
+            </label>
+            <input type="password" name="password2"
+              class="form-control {% if errors.password2 %}is-invalid{% endif %}"
+              placeholder="Repeat password" autocomplete="new-password"/>
+            {% if errors.password2 %}
+            <div class="invalid-feedback">{{ errors.password2 }}</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SUBMIT ── #}
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-person-check me-1"></i>Create Parent Account
+      </button>
+      <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </div>{# /col-lg-8 #}
+
+  {# ════════════════════════════ RIGHT COLUMN: help ════════════════════════════ #}
+  <div class="col-12 col-lg-4">
+
+    <div class="card border-primary-subtle mb-4 sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle border-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary">
+          <i class="bi bi-lightbulb me-2"></i>Registration Guide
+        </h6>
+      </div>
+      <div class="card-body small text-secondary">
+
+        <div class="fw-700 text-dark mb-1">Required fields</div>
+        <p class="mb-3">
+          First name, last name, gender, phone, relationship to student,
+          and a login password are the minimum required.
+        </p>
+
+        <div class="fw-700 text-dark mb-1">Parent ID</div>
+        <p class="mb-3">
+          The system auto-generates a unique ID like
+          <code>PAR20250001</code>. This is the parent's <strong>login
+          username</strong>. Print it on the admission letter or SMS it to them.
+        </p>
+
+        <div class="fw-700 text-dark mb-1">Linking to students</div>
+        <p class="mb-3">
+          After creating this account, link students to this parent from each
+          student's profile page.
+        </p>
+
+        <div class="fw-700 text-dark mb-1">Uganda location</div>
+        <p class="mb-0">
+          District, sub-county and village are optional but useful for
+          home-visit records and communications.
+        </p>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>{# /row #}
+</form>
+
+{% endblock %}

@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Subjects{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}" class="text-secondary">Academics</a></li>
+<li class="breadcrumb-item active">Subjects</li>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">Subjects</h4>
+    <p class="text-muted small mb-0">Manage curriculum subjects across all levels</p>
+  </div>
+  <a href="{% url 'academics:subject_add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Add Subject
+  </a>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total_subjects|default:"0" }}</div>
+      <div class="stat-label">Total Subjects</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ active_subjects|default:"0" }}</div>
+      <div class="stat-label">Active</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ compulsory_subjects|default:"0" }}</div>
+      <div class="stat-label">Compulsory</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-secondary">{{ inactive_subjects|default:"0" }}</div>
+      <div class="stat-label">Inactive</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters Card -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" name="q" value="{{ search }}" placeholder="Name, code, description…"/>
+        </div>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Level</label>
+        <select class="form-select form-select-sm" name="level">
+          <option value="">All Levels</option>
+          {% for key, label in level_choices %}
+          <option value="{{ key }}" {% if level_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Status</label>
+        <select class="form-select form-select-sm" name="status">
+          <option value="">All</option>
+          <option value="active"   {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Compulsory</label>
+        <select class="form-select form-select-sm" name="compulsory">
+          <option value="">All</option>
+          <option value="1" {% if compulsory_filter == '1' %}selected{% endif %}>Compulsory</option>
+          <option value="0" {% if compulsory_filter == '0' %}selected{% endif %}>Optional</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        <a href="{% url 'academics:subject_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Table Card -->
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">
+      {% if page_obj.paginator.count %}
+        {{ page_obj.paginator.count }} subject{{ page_obj.paginator.count|pluralize }}
+      {% else %}
+        No subjects found
+      {% endif %}
+    </span>
+  </div>
+
+  {% if subjects %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Level</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Sort</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for subject in subjects %}
+        <tr>
+          <td>
+            <span class="badge bg-dark text-white fw-700 font-monospace">{{ subject.code }}</span>
+          </td>
+          <td>
+            <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="fw-700 text-dark">
+              {{ subject.name }}
+            </a>
+            {% if subject.description %}
+            <div class="text-muted small text-truncate" style="max-width:220px;">{{ subject.description }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ subject.get_level_display }}
+            </span>
+          </td>
+          <td>
+            {% if subject.is_compulsory %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Compulsory</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if subject.is_active %}
+              <span class="badge bg-success rounded-pill">Active</span>
+            {% else %}
+              <span class="badge bg-danger rounded-pill">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ subject.sort_order }}</td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="btn btn-sm btn-outline-secondary" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'academics:subject_edit' subject.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="post" action="{% url 'academics:subject_toggle_active' subject.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+                <button type="submit" class="btn btn-sm {% if subject.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" title="{% if subject.is_active %}Deactivate{% else %}Activate{% endif %}">
+                  <i class="bi {% if subject.is_active %}bi-toggle-on{% else %}bi-toggle-off{% endif %}"></i>
+                </button>
+              </form>
+              <a href="{% url 'academics:subject_delete' subject.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between">
+    <small class="text-muted">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&status={{ status_filter }}&level={{ level_filter }}&compulsory={{ compulsory_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&q={{ search }}&status={{ status_filter }}&level={{ level_filter }}&compulsory={{ compulsory_filter }}">{{ num }}</a>
+          </li>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&status={{ status_filter }}&level={{ level_filter }}&compulsory={{ compulsory_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-journal-x fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700">No subjects found</div>
+    <div class="small">Try adjusting your filters or <a href="{% url 'academics:subject_add' %}">add a new subject</a>.</div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

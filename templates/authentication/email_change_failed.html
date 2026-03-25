@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Email Change Failed{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm text-center border-danger border-2">
+            <div class="card-body p-5">
+                <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex p-4 mb-4">
+                    <i class="bi bi-x-circle-fill text-danger" style="font-size: 4rem;"></i>
+                </div>
+                <h3 class="fw-bold mb-3">Email Change Failed</h3>
+                <p class="text-muted mb-4">
+                    The email change request could not be completed.
+                </p>
+                
+                <div class="alert alert-warning border-0 text-start mb-4">
+                    <strong class="d-block mb-2">Possible reasons:</strong>
+                    <ul class="mb-0 small">
+                        <li>Invalid or expired OTP</li>
+                        <li>Maximum verification attempts exceeded</li>
+                        <li>Request timeout</li>
+                    </ul>
+                </div>
+                
+                <p class="text-muted mb-2 small">Your account email remains:</p>
+                <p class="mb-4"><strong class="text-primary">{{ user.email }}</strong></p>
+                
+                <div class="alert alert-info border-0 small mb-4">
+                    <i class="bi bi-shield-check"></i> Failure notifications have been sent to both email addresses for security.
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="{% url 'change_email' %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise"></i> Try Again
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

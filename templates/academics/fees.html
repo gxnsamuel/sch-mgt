@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Fees Structure — Term {{ term.name }} {{ term.academic_year }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:term_list' %}" class="text-secondary">Terms</a></li>
+<li class="breadcrumb-item"><a href="{% url 'academics:term_detail_overview' term.pk %}" class="text-secondary">Term {{ term.name }} — {{ term.academic_year }}</a></li>
+<li class="breadcrumb-item active">Fees Structure</li>
+{% endblock %}
+
+{% block content %}
+{% include "academics/terms/detail/_term_header.html" %}
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total_fees_records|default:"0" }}</div>
+      <div class="stat-label">Fee Records</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ total_expected|default:"0"|floatformat:0 }}</div>
+      <div class="stat-label">Total Expected (UGX)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ compulsory_total|default:"0"|floatformat:0 }}</div>
+      <div class="stat-label">Compulsory Total</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-info">{{ fee_types_count|default:"0" }}</div>
+      <div class="stat-label">Fee Categories</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-6 col-md-3">
+        <label class="form-label fw-700 small mb-1">Fee Type</label>
+        <select class="form-select form-select-sm" name="fees_type">
+          <option value="">All Types</option>
+          {% for key, label in fees_type_choices %}
+          <option value="{{ key }}" {% if fees_type_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label fw-700 small mb-1">Class</label>
+        <select class="form-select form-select-sm" name="class">
+          <option value="">All Classes</option>
+          {% for cls in all_classes %}
+          <option value="{{ cls.level }}" {% if class_filter == cls.level %}selected{% endif %}>{{ cls.display_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel me-1"></i>Filter</button>
+        <a href="{% url 'academics:term_detail_fees' term.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+  <div class="card-header py-3 fw-700">{{ page_obj.paginator.count|default:"0" }} fee record{{ page_obj.paginator.count|pluralize }}</div>
+  {% if fees %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Class</th>
+          <th>Fee Type</th>
+          <th>Amount (UGX)</th>
+          <th>Compulsory</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fee in fees %}
+        <tr>
+          <td class="fw-700">{{ fee.school_class.display_name }}</td>
+          <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ fee.get_fees_type_display }}</span></td>
+          <td class="fw-700 font-monospace">{{ fee.amount|floatformat:0 }}</td>
+          <td>
+            {% if fee.is_compulsory %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ fee.notes|truncatechars:50|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between">
+    <small class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</small>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&fees_type={{ fees_type_filter }}&class={{ class_filter }}"><i class="bi bi-chevron-left"></i></a></li>{% endif %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&fees_type={{ fees_type_filter }}&class={{ class_filter }}"><i class="bi bi-chevron-right"></i></a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-cash-stack fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700">No fee records found</div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

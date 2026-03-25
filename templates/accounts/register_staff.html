@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block title %}Register Staff{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'accounts:user_list' %}" class="text-secondary">Users</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Register Staff</li>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      Register a teacher, support staff member, or administrator.
+    </p>
+  </div>
+  <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Users
+  </a>
+</div>
+
+{# ── User-type notice banner (shown on GET, JS-free) ── #}
+<div class="alert alert-light border mb-4 small">
+  <i class="bi bi-info-circle text-primary me-1"></i>
+  Select the <strong>User Type</strong> below. Teaching-specific fields (qualification, class, etc.)
+  appear for <em>Teacher</em>; payroll fields are available for all staff types.
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+
+  <div class="col-12 col-lg-8">
+
+    {# ── SECTION 1: Account Type ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-person-badge me-2 text-primary"></i>Account Type
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              User Type <span class="text-danger">*</span>
+            </label>
+            <select name="user_type"
+              class="form-select {% if errors.user_type %}is-invalid{% endif %}">
+              <option value="">— Select type —</option>
+              {% for key, label in user_type_choices %}
+              <option value="{{ key }}"
+                {% if post.user_type == key %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.user_type %}
+            <div class="invalid-feedback">{{ errors.user_type }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Role <span class="text-danger">*</span>
+            </label>
+            <select name="role"
+              class="form-select {% if errors.role %}is-invalid{% endif %}">
+              <option value="">— Select role —</option>
+              {# Teaching #}
+              <optgroup label="Teaching Staff">
+                {% for key, label in role_choices %}
+                  {% if key in 'head_teacher,deputy_head,teacher,subject_teacher' %}
+                  <option value="{{ key }}" {% if post.role == key %}selected{% endif %}>{{ label }}</option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+              {# Non-teaching #}
+              <optgroup label="Non-Teaching / Support">
+                {% for key, label in role_choices %}
+                  {% if key not in 'head_teacher,deputy_head,teacher,subject_teacher' %}
+                  <option value="{{ key }}" {% if post.role == key %}selected{% endif %}>{{ label }}</option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+            </select>
+            {% if errors.role %}
+            <div class="invalid-feedback">{{ errors.role }}</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 2: Personal Information ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-person-circle me-2 text-primary"></i>Personal Information
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              First Name <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="first_name"
+              class="form-control {% if errors.first_name %}is-invalid{% endif %}"
+              value="{{ post.first_name|default:'' }}"
+              placeholder="e.g. John" maxlength="50"/>
+            {% if errors.first_name %}
+            <div class="invalid-feedback">{{ errors.first_name }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              Last Name <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="last_name"
+              class="form-control {% if errors.last_name %}is-invalid{% endif %}"
+              value="{{ post.last_name|default:'' }}"
+              placeholder="e.g. Ssemakula" maxlength="50"/>
+            {% if errors.last_name %}
+            <div class="invalid-feedback">{{ errors.last_name }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Other Names</label>
+            <input type="text" name="other_names"
+              class="form-control"
+              value="{{ post.other_names|default:'' }}"
+              placeholder="Middle / other names" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Gender <span class="text-danger">*</span>
+            </label>
+            <select name="gender"
+              class="form-select {% if errors.gender %}is-invalid{% endif %}">
+              <option value="">— Select —</option>
+              <option value="male"              {% if post.gender == 'male' %}selected{% endif %}>Male</option>
+              <option value="female"            {% if post.gender == 'female' %}selected{% endif %}>Female</option>
+              <option value="other"             {% if post.gender == 'other' %}selected{% endif %}>Other</option>
+              <option value="prefer_not_to_say" {% if post.gender == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
+            </select>
+            {% if errors.gender %}
+            <div class="invalid-feedback">{{ errors.gender }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">NIN (National ID)</label>
+            <input type="text" name="nin"
+              class="form-control font-monospace"
+              value="{{ post.nin|default:'' }}"
+              placeholder="e.g. CM9000000HDKQ" maxlength="20"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Profile Photo</label>
+            <input type="file" name="profile_photo"
+              class="form-control" accept="image/*"/>
+            <div class="form-text">JPG or PNG. Optional — used on staff profiles.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 3: Contact ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-telephone me-2 text-success"></i>Contact Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Phone <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-phone text-secondary"></i></span>
+              <input type="tel" name="phone"
+                class="form-control {% if errors.phone %}is-invalid{% endif %}"
+                value="{{ post.phone|default:'' }}"
+                placeholder="+256 700 000 000" maxlength="15"/>
+              {% if errors.phone %}
+              <div class="invalid-feedback">{{ errors.phone }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Alt. Phone</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-phone text-secondary"></i></span>
+              <input type="tel" name="alt_phone"
+                class="form-control"
+                value="{{ post.alt_phone|default:'' }}"
+                placeholder="+256 700 000 000" maxlength="15"/>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Email</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-envelope text-secondary"></i></span>
+              <input type="email" name="email"
+                class="form-control {% if errors.email %}is-invalid{% endif %}"
+                value="{{ post.email|default:'' }}"
+                placeholder="staff@school.ac.ug" maxlength="254"/>
+              {% if errors.email %}
+              <div class="invalid-feedback">{{ errors.email }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Home Address</label>
+            <input type="text" name="address"
+              class="form-control"
+              value="{{ post.address|default:'' }}"
+              placeholder="Village / street" maxlength="200"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 4: Login Credentials ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-key me-2 text-info"></i>Login Credentials
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              Username <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="username"
+              class="form-control {% if errors.username %}is-invalid{% endif %}"
+              value="{{ post.username|default:'' }}"
+              placeholder="e.g. jssemakula" maxlength="150"
+              autocomplete="username"/>
+            <div class="form-text">Unique login username. No spaces.</div>
+            {% if errors.username %}
+            <div class="invalid-feedback">{{ errors.username }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              Password <span class="text-danger">*</span>
+            </label>
+            <input type="password" name="password"
+              class="form-control {% if errors.password %}is-invalid{% endif %}"
+              placeholder="Temporary password" autocomplete="new-password"/>
+            {% if errors.password %}
+            <div class="invalid-feedback">{{ errors.password }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              Confirm Password <span class="text-danger">*</span>
+            </label>
+            <input type="password" name="password2"
+              class="form-control {% if errors.password2 %}is-invalid{% endif %}"
+              placeholder="Repeat password" autocomplete="new-password"/>
+            {% if errors.password2 %}
+            <div class="invalid-feedback">{{ errors.password2 }}</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 5: Employment ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-briefcase me-2 text-warning"></i>Employment Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              Employment Type <span class="text-danger">*</span>
+            </label>
+            <select name="employment_type"
+              class="form-select {% if errors.employment_type %}is-invalid{% endif %}">
+              {% for key, label in employment_choices %}
+              <option value="{{ key }}"
+                {% if post.employment_type == key or not post and key == 'permanent' %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.employment_type %}
+            <div class="invalid-feedback">{{ errors.employment_type }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              Date Joined <span class="text-danger">*</span>
+            </label>
+            <input type="date" name="date_joined"
+              class="form-control {% if errors.date_joined %}is-invalid{% endif %}"
+              value="{{ post.date_joined|default:'' }}"/>
+            {% if errors.date_joined %}
+            <div class="invalid-feedback">{{ errors.date_joined }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Date Left</label>
+            <input type="date" name="date_left"
+              class="form-control"
+              value="{{ post.date_left|default:'' }}"/>
+            <div class="form-text">Leave blank if still employed.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 6: Teaching-specific ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-book me-2 text-success"></i>Teaching Details
+          <span class="text-muted small fw-400 ms-1">(teachers only)</span>
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Qualification</label>
+            <select name="qualification" class="form-select">
+              <option value="">— None / N/A —</option>
+              {% for key, label in qualification_choices %}
+              <option value="{{ key }}"
+                {% if post.qualification == key %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Specialization</label>
+            <input type="text" name="specialization"
+              class="form-control"
+              value="{{ post.specialization|default:'' }}"
+              placeholder="e.g. Mathematics, English, Early Childhood"
+              maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Class Managed</label>
+            <select name="class_managed_id" class="form-select">
+              <option value="">— Not a class teacher —</option>
+              {% for cls in all_classes %}
+              <option value="{{ cls.pk }}"
+                {% if post.class_managed_id == cls.pk|stringformat:"s" %}selected{% endif %}>
+                {{ cls.display_name }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">The class this teacher is directly responsible for.</div>
+          </div>
+
+          <div class="col-12 col-sm-6 d-flex align-items-center">
+            <div class="form-check form-switch mt-4">
+              <input class="form-check-input" type="checkbox" role="switch"
+                id="is_class_teacher" name="is_class_teacher" value="1"
+                {% if post.is_class_teacher %}checked{% endif %}/>
+              <label class="form-check-label fw-700" for="is_class_teacher">
+                Assigned as Class / Form Teacher
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Signature Upload</label>
+            <input type="file" name="signature" class="form-control" accept="image/*"/>
+            <div class="form-text">Used on report cards. JPG or PNG.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 7: Payroll / HR ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-cash me-2 text-secondary"></i>Payroll &amp; HR
+          <span class="text-muted small fw-400 ms-1">(optional)</span>
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">NSSF Number</label>
+            <input type="text" name="nssf_number"
+              class="form-control font-monospace"
+              value="{{ post.nssf_number|default:'' }}"
+              placeholder="NSSF number" maxlength="20"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">TIN Number</label>
+            <input type="text" name="tin_number"
+              class="form-control font-monospace"
+              value="{{ post.tin_number|default:'' }}"
+              placeholder="Tax ID number" maxlength="20"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Salary Scale</label>
+            <input type="text" name="salary_scale"
+              class="form-control"
+              value="{{ post.salary_scale|default:'' }}"
+              placeholder="e.g. U4, U5, Grade A" maxlength="50"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Bank Name</label>
+            <input type="text" name="bank_name"
+              class="form-control"
+              value="{{ post.bank_name|default:'' }}"
+              placeholder="e.g. Stanbic, Centenary, Equity" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Bank Account</label>
+            <input type="text" name="bank_account"
+              class="form-control font-monospace"
+              value="{{ post.bank_account|default:'' }}"
+              placeholder="Account number" maxlength="30"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── SECTION 8: Bio & Notes ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-journal-text me-2 text-secondary"></i>Bio &amp; Notes
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label fw-700 small">Staff Bio</label>
+          <textarea name="bio" class="form-control" rows="3"
+            placeholder="Brief professional biography shown on the staff profile."
+          >{{ post.bio|default:'' }}</textarea>
+        </div>
+        <div>
+          <label class="form-label fw-700 small">Internal HR Notes</label>
+          <textarea name="notes" class="form-control" rows="2"
+            placeholder="Internal HR notes — not visible to the staff member."
+          >{{ post.notes|default:'' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    {# ── SUBMIT ── #}
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-person-check me-1"></i>Create Staff Account
+      </button>
+      <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </div>{# /col-lg-8 #}
+
+
+  <div class="col-12 col-lg-4">
+
+    <div class="card border-primary-subtle mb-3 sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle border-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary">
+          <i class="bi bi-lightbulb me-2"></i>Registration Guide
+        </h6>
+      </div>
+      <div class="card-body small text-secondary">
+
+        <div class="fw-700 text-dark mb-1">User Types</div>
+        <ul class="ps-3 mb-3">
+          <li><strong>Teacher</strong> — Teaching staff with class &amp; subject assignments.</li>
+          <li><strong>Support Staff</strong> — Non-teaching: bursar, nurse, driver, etc.</li>
+          <li><strong>Administrator</strong> — Full system access including Django admin.</li>
+        </ul>
+
+        <div class="fw-700 text-dark mb-1">Employee ID</div>
+        <p class="mb-3">
+          Auto-generated on save (e.g. <code>EMP20250001</code>).
+          You do not need to enter it.
+        </p>
+
+        <div class="fw-700 text-dark mb-1">Teaching fields</div>
+        <p class="mb-3">
+          Qualification, specialization, class managed, and signature
+          are relevant only for teaching staff. Leave blank for support staff.
+        </p>
+
+        <div class="fw-700 text-dark mb-1">File uploads</div>
+        <p class="mb-0">
+          Profile photo and signature are optional. Signature is used on
+          auto-generated report cards and official letters.
+        </p>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</form>
+
+{% endblock %}

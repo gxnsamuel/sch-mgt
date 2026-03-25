@@ -1,0 +1,367 @@
+<!-- ===================== MOBILE TOGGLE BUTTON ===================== -->
+<!-- Button: only visible on mobile -->
+<button class="btn btn-primary d-md-none position-fixed top-0 start-0 m-2"
+        type="button"
+        data-bs-toggle="offcanvas"
+        data-bs-target="#sidebarOffcanvas"
+        aria-controls="sidebarOffcanvas"
+        style="z-index: 1045;">
+    <i class="bi bi-list fs-5"></i>
+</button>
+
+
+<!-- ===================== OFFCANVAS SIDEBAR (mobile) ===================== -->
+<!-- NO d-md-none here — offcanvas hides itself, BS JS needs to find it -->
+<div class="offcanvas offcanvas-start"
+     tabindex="-1"
+     id="sidebarOffcanvas"
+     aria-labelledby="sidebarOffcanvasLabel"
+     style="width: 260px;">
+
+    <div class="offcanvas-header border-bottom">
+        <h6 class="offcanvas-title fw-bold" id="sidebarOffcanvasLabel">
+            <i class="bi bi-grid me-2 text-primary"></i>GCCI Dashboard
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+
+    <div class="offcanvas-body p-0" style="overflow-y: auto;">
+        <div class="pt-3 pb-4">
+
+            <!-- Overview -->
+            <div class="px-3 mb-1">
+                <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">Overview</small>
+            </div>
+            <ul class="nav flex-column px-2 mb-3">
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if request.resolver_match.url_name == 'dashboard' %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'dashboard' %}">
+                        <i class="bi bi-grid me-2"></i> Dashboard
+                    </a>
+                </li>
+            </ul>
+
+            <hr class="mx-3 my-2">
+
+            <!-- Content -->
+            <div class="px-3 mb-1">
+                <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">Content</small>
+            </div>
+            <ul class="nav flex-column px-2 mb-3">
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'leader' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'leaders_list' %}">
+                        <i class="bi bi-person-badge me-2"></i> Church Leaders
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'blog' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'blogs_list' %}">
+                        <i class="bi bi-journal-richtext me-2"></i> Blogs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'pastor_message' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'pastor_messages_list' %}">
+                        <i class="bi bi-mic me-2"></i> Pastor Messages
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'event' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'events_list' %}">
+                        <i class="bi bi-calendar-event me-2"></i> Events
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'service' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'services_list' %}">
+                        <i class="bi bi-clock me-2"></i> Services &amp; Prayers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'ministry' in request.resolver_match.url_name and 'article' not in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'ministry_list' %}">
+                        <i class="bi bi-people me-2"></i> Ministry Work
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'ministry_article' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'ministry_articles_list' %}">
+                        <i class="bi bi-newspaper me-2"></i> Ministry Articles
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'gallery' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'gallery_list' %}">
+                        <i class="bi bi-images me-2"></i> Gallery
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'testimon' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'testimonials_list' %}">
+                        <i class="bi bi-chat-quote me-2"></i> Testimonials
+                    </a>
+                </li>
+            </ul>
+
+            <hr class="mx-3 my-2">
+
+            <!-- Community -->
+            <div class="px-3 mb-1">
+                <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">Community</small>
+            </div>
+            <ul class="nav flex-column px-2 mb-3">
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'member' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'members_list' %}">
+                        <i class="bi bi-person-plus me-2"></i> Church Members
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'contact_message' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'contact_messages_list' %}">
+                        <i class="bi bi-envelope me-2"></i> Contact Messages
+                    </a>
+                </li>
+            </ul>
+
+            <hr class="mx-3 my-2">
+
+            <!-- Administration -->
+            <div class="px-3 mb-1">
+                <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">Administration</small>
+            </div>
+            <ul class="nav flex-column px-2 mb-3">
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'staff' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'staff_list' %}">
+                        <i class="bi bi-people-fill me-2"></i> Users &amp; Staff
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'activity_logs' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'activity_logs' %}">
+                        <i class="bi bi-list-check me-2"></i> Activity Logs
+                    </a>
+                </li>
+            </ul>
+
+            <hr class="mx-3 my-2">
+
+            <!-- My Account -->
+            <div class="px-3 mb-1">
+                <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">My Account</small>
+            </div>
+            <ul class="nav flex-column px-2 mb-3">
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if request.resolver_match.url_name == 'profile' %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'profile' %}">
+                        <i class="bi bi-person me-2"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'change_password' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'change_password' %}">
+                        <i class="bi bi-shield-lock me-2"></i> Security
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded py-2 {% if 'change_email' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                       href="{% url 'change_email' %}">
+                        <i class="bi bi-envelope me-2"></i> Change Email
+                    </a>
+                </li>
+            </ul>
+
+            <!-- User Card -->
+            <div class="px-3">
+                <div class="border rounded p-2 bg-light">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:32px;height:32px;font-size:.8rem;">
+                            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                        </div>
+                        <div class="overflow-hidden">
+                            <div class="fw-semibold text-truncate small">{{ user.get_full_name }}</div>
+                            <div class="text-muted text-truncate" style="font-size:.72rem;">{{ user.email }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ===================== REGULAR SIDEBAR (desktop md and above) ===================== -->
+<nav class="col-md-3 col-lg-2 d-none d-md-block bg-white sidebar border-end sticky-top"
+     style="height: 100vh; overflow-y: auto;">
+    <div class="pt-3 pb-4">
+
+        <!-- Overview -->
+        <div class="px-3 mb-1">
+            <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">Overview</small>
+        </div>
+        <ul class="nav flex-column px-2 mb-3">
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if request.resolver_match.url_name == 'dashboard' %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'dashboard' %}">
+                    <i class="bi bi-grid me-2"></i> Dashboard
+                </a>
+            </li>
+        </ul>
+
+        <hr class="mx-3 my-2">
+
+        <!-- Content -->
+        <div class="px-3 mb-1">
+            <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">Content</small>
+        </div>
+        <ul class="nav flex-column px-2 mb-3">
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'leader' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'leaders_list' %}">
+                    <i class="bi bi-person-badge me-2"></i> Church Leaders
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'blog' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'blogs_list' %}">
+                    <i class="bi bi-journal-richtext me-2"></i> Blogs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'pastor_message' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'pastor_messages_list' %}">
+                    <i class="bi bi-mic me-2"></i> Pastor Messages
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'event' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'events_list' %}">
+                    <i class="bi bi-calendar-event me-2"></i> Events
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'service' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'services_list' %}">
+                    <i class="bi bi-clock me-2"></i> Services &amp; Prayers
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'ministry' in request.resolver_match.url_name and 'article' not in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'ministry_list' %}">
+                    <i class="bi bi-people me-2"></i> Ministry Work
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'ministry_article' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'ministry_articles_list' %}">
+                    <i class="bi bi-newspaper me-2"></i> Ministry Articles
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'gallery' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'gallery_list' %}">
+                    <i class="bi bi-images me-2"></i> Gallery
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'testimon' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'testimonials_list' %}">
+                    <i class="bi bi-chat-quote me-2"></i> Testimonials
+                </a>
+            </li>
+        </ul>
+
+        <hr class="mx-3 my-2">
+
+        <!-- Community -->
+        <div class="px-3 mb-1">
+            <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">Community</small>
+        </div>
+        <ul class="nav flex-column px-2 mb-3">
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'member' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'members_list' %}">
+                    <i class="bi bi-person-plus me-2"></i> Church Members
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'contact_message' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'contact_messages_list' %}">
+                    <i class="bi bi-envelope me-2"></i> Contact Messages
+                </a>
+            </li>
+        </ul>
+
+        <hr class="mx-3 my-2">
+
+        <!-- Administration -->
+        <div class="px-3 mb-1">
+            <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">Administration</small>
+        </div>
+        <ul class="nav flex-column px-2 mb-3">
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'staff' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'staff_list' %}">
+                    <i class="bi bi-people-fill me-2"></i> Users &amp; Staff
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'activity_logs' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'activity_logs' %}">
+                    <i class="bi bi-list-check me-2"></i> Activity Logs
+                </a>
+            </li>
+        </ul>
+
+        <hr class="mx-3 my-2">
+
+        <!-- My Account -->
+        <div class="px-3 mb-1">
+            <small class="text-uppercase text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: .06em;">My Account</small>
+        </div>
+        <ul class="nav flex-column px-2 mb-3">
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if request.resolver_match.url_name == 'profile' %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'profile' %}">
+                    <i class="bi bi-person me-2"></i> Profile
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'change_password' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'change_password' %}">
+                    <i class="bi bi-shield-lock me-2"></i> Security
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded py-2 {% if 'change_email' in request.resolver_match.url_name %}bg-primary text-white{% else %}text-secondary{% endif %}"
+                   href="{% url 'change_email' %}">
+                    <i class="bi bi-envelope me-2"></i> Change Email
+                </a>
+            </li>
+        </ul>
+
+        <!-- User Card -->
+        <div class="px-3">
+            <div class="border rounded p-2 bg-light">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:32px;height:32px;font-size:.8rem;">
+                        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="fw-semibold text-truncate small">{{ user.get_full_name }}</div>
+                        <div class="text-muted text-truncate" style="font-size:.72rem;">{{ user.email }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</nav>
+
+
+

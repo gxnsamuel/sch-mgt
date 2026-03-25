@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Identity{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
+                                <i class="bi bi-person-check text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                            <h4 class="fw-bold">Verify Your Identity</h4>
+                            {% if mode == 'email' %}
+                            <p class="text-muted small">Enter your email address to continue</p>
+                            {% else %}
+                            <p class="text-muted small">Enter your username to continue</p>
+                            {% endif %}
+                        </div>
+                        
+                        <form method="post" action="{% url 'fp_verify_identity' %}">
+                            {% csrf_token %}
+                            
+                            {% if mode == 'email' %}
+                            <div class="mb-4">
+                                <label for="email" class="form-label fw-semibold">
+                                    Email Address <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" 
+                                           class="form-control" 
+                                           id="email" 
+                                           name="email" 
+                                           placeholder="your-email@example.com"
+                                           required
+                                           autofocus>
+                                </div>
+                                <small class="form-text text-muted">Hint: {{ obfuscated }}</small>
+                                {% if email_tries > 0 %}
+                                <div class="alert alert-warning border-0 mt-2 small">
+                                    <i class="bi bi-exclamation-triangle"></i> {{ 2|add:"-"|add:email_tries }} attempt(s) remaining
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-arrow-right-circle"></i> Continue
+                                </button>
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <form method="post" action="{% url 'fp_verify_identity' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="switch_to_username">
+                                    <button type="submit" class="btn btn-link text-decoration-none small">
+                                        Try with username instead
+                                    </button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <div class="mb-4">
+                                <label for="username" class="form-label fw-semibold">
+                                    Username <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-at"></i></span>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="username" 
+                                           name="username" 
+                                           placeholder="your_username"
+                                           required
+                                           autofocus>
+                                </div>
+                                {% if user_tries > 0 %}
+                                <div class="alert alert-danger border-0 mt-2 small">
+                                    <i class="bi bi-exclamation-triangle"></i> {{ 2|add:"-"|add:user_tries }} attempt(s) remaining
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-arrow-right-circle"></i> Continue
+                                </button>
+                            </div>
+                            {% endif %}
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-center">
+                            <a href="{% url 'forgot_password' %}" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

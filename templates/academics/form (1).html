@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:term_list' %}" class="text-secondary">Terms</a></li>
+{% if action == 'edit' %}
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:term_detail_overview' term.pk %}" class="text-secondary">Term {{ term.name }} ({{ term.academic_year }})</a>
+</li>
+<li class="breadcrumb-item active">Edit</li>
+{% else %}
+<li class="breadcrumb-item active">Add Term</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">Uganda runs 3 terms per calendar year.</p>
+  </div>
+  {% if action == 'edit' %}
+  <a href="{% url 'academics:term_detail_overview' term.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+  {% else %}
+  <a href="{% url 'academics:term_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+  {% endif %}
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="row g-4">
+
+    <!-- Left column: main fields -->
+    <div class="col-12 col-lg-8">
+
+      <!-- Core -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <h6 class="fw-700 mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i>Core Details</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700">Term Number <span class="text-danger">*</span></label>
+              <select name="name" class="form-select {% if errors.name %}is-invalid{% endif %}">
+                <option value="">— Select —</option>
+                <option value="1" {% if post.name == '1' or action == 'edit' and term.name == 1 %}selected{% endif %}>Term 1</option>
+                <option value="2" {% if post.name == '2' or action == 'edit' and term.name == 2 %}selected{% endif %}>Term 2</option>
+                <option value="3" {% if post.name == '3' or action == 'edit' and term.name == 3 %}selected{% endif %}>Term 3</option>
+              </select>
+              {% if errors.name %}<div class="invalid-feedback">{{ errors.name }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700">Start Date <span class="text-danger">*</span></label>
+              <input type="date" name="start_date" class="form-control {% if errors.start_date %}is-invalid{% endif %}"
+                value="{% if post.start_date %}{{ post.start_date }}{% elif action == 'edit' %}{{ term.start_date|date:'Y-m-d' }}{% endif %}"/>
+              <div class="form-text">First day school opens. Determines the academic year.</div>
+              {% if errors.start_date %}<div class="invalid-feedback">{{ errors.start_date }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700">End Date <span class="text-danger">*</span></label>
+              <input type="date" name="end_date" class="form-control {% if errors.end_date %}is-invalid{% endif %}"
+                value="{% if post.end_date %}{{ post.end_date }}{% elif action == 'edit' %}{{ term.end_date|date:'Y-m-d' }}{% endif %}"/>
+              <div class="form-text">Last day of normal lessons (before EOT exams).</div>
+              {% if errors.end_date %}<div class="invalid-feedback">{{ errors.end_date }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700">Closing Date</label>
+              <input type="date" name="closing_date" class="form-control"
+                value="{% if post.closing_date %}{{ post.closing_date }}{% elif action == 'edit' %}{{ term.closing_date|date:'Y-m-d' }}{% endif %}"/>
+              <div class="form-text">Last day students are in school (after EOT exams).</div>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700">Opening Date (next term)</label>
+              <input type="date" name="opening_date" class="form-control"
+                value="{% if post.opening_date %}{{ post.opening_date }}{% elif action == 'edit' %}{{ term.opening_date|date:'Y-m-d' }}{% endif %}"/>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="is_current" name="is_current" value="1"
+                  {% if post.is_current or action == 'edit' and term.is_current %}checked{% endif %}/>
+                <label class="form-check-label fw-700" for="is_current">Mark as Current Term</label>
+              </div>
+              <div class="form-text">Only one term can be current at a time. Enabling this will deactivate all other terms.</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Exam Windows -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <h6 class="fw-700 mb-0"><i class="bi bi-clipboard-check me-2 text-warning"></i>Exam Windows</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">Three exam windows map to assessment types: BOT (Beginning), MOT (Middle), EOT (End of Term).</p>
+
+          <div class="row g-3">
+            <!-- BOT -->
+            <div class="col-12">
+              <div class="p-3 rounded border bg-primary-subtle border-primary-subtle">
+                <div class="fw-700 mb-2 text-primary">
+                  <span class="badge bg-primary me-2">BOT</span>Beginning of Term Exam
+                </div>
+                <div class="row g-2">
+                  <div class="col-6">
+                    <label class="form-label fw-600 small">Start</label>
+                    <input type="date" name="bot_start_date" class="form-control form-control-sm {% if errors.bot_start_date %}is-invalid{% endif %}"
+                      value="{% if post.bot_start_date %}{{ post.bot_start_date }}{% elif action == 'edit' %}{{ term.bot_start_date|date:'Y-m-d' }}{% endif %}"/>
+                    {% if errors.bot_start_date %}<div class="invalid-feedback">{{ errors.bot_start_date }}</div>{% endif %}
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label fw-600 small">End</label>
+                    <input type="date" name="bot_end_date" class="form-control form-control-sm {% if errors.bot_end_date %}is-invalid{% endif %}"
+                      value="{% if post.bot_end_date %}{{ post.bot_end_date }}{% elif action == 'edit' %}{{ term.bot_end_date|date:'Y-m-d' }}{% endif %}"/>
+                    {% if errors.bot_end_date %}<div class="invalid-feedback">{{ errors.bot_end_date }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MOT -->
+            <div class="col-12">
+              <div class="p-3 rounded border bg-warning-subtle border-warning-subtle">
+                <div class="fw-700 mb-2 text-warning">
+                  <span class="badge bg-warning text-dark me-2">MOT</span>Middle of Term Exam
+                </div>
+                <div class="row g-2">
+                  <div class="col-6">
+                    <label class="form-label fw-600 small">Start</label>
+                    <input type="date" name="mot_start_date" class="form-control form-control-sm {% if errors.mot_start_date %}is-invalid{% endif %}"
+                      value="{% if post.mot_start_date %}{{ post.mot_start_date }}{% elif action == 'edit' %}{{ term.mot_start_date|date:'Y-m-d' }}{% endif %}"/>
+                    {% if errors.mot_start_date %}<div class="invalid-feedback">{{ errors.mot_start_date }}</div>{% endif %}
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label fw-600 small">End</label>
+                    <input type="date" name="mot_end_date" class="form-control form-control-sm {% if errors.mot_end_date %}is-invalid{% endif %}"
+                      value="{% if post.mot_end_date %}{{ post.mot_end_date }}{% elif action == 'edit' %}{{ term.mot_end_date|date:'Y-m-d' }}{% endif %}"/>
+                    {% if errors.mot_end_date %}<div class="invalid-feedback">{{ errors.mot_end_date }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- EOT -->
+            <div class="col-12">
+              <div class="p-3 rounded border bg-danger-subtle border-danger-subtle">
+                <div class="fw-700 mb-2 text-danger">
+                  <span class="badge bg-danger me-2">EOT</span>End of Term Exam
+                </div>
+                <div class="row g-2">
+                  <div class="col-6">
+                    <label class="form-label fw-600 small">Start</label>
+                    <input type="date" name="eot_start_date" class="form-control form-control-sm {% if errors.eot_start_date %}is-invalid{% endif %}"
+                      value="{% if post.eot_start_date %}{{ post.eot_start_date }}{% elif action == 'edit' %}{{ term.eot_start_date|date:'Y-m-d' }}{% endif %}"/>
+                    {% if errors.eot_start_date %}<div class="invalid-feedback">{{ errors.eot_start_date }}</div>{% endif %}
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label fw-600 small">End</label>
+                    <input type="date" name="eot_end_date" class="form-control form-control-sm {% if errors.eot_end_date %}is-invalid{% endif %}"
+                      value="{% if post.eot_end_date %}{{ post.eot_end_date }}{% elif action == 'edit' %}{{ term.eot_end_date|date:'Y-m-d' }}{% endif %}"/>
+                    {% if errors.eot_end_date %}<div class="invalid-feedback">{{ errors.eot_end_date }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Holiday Studies -->
+      <div class="card mb-4">
+        <div class="card-header py-3 d-flex align-items-center gap-3">
+          <h6 class="fw-700 mb-0"><i class="bi bi-house-heart me-2 text-success"></i>Holiday Studies</h6>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch" id="has_holiday_studies"
+              name="has_holiday_studies" value="1"
+              {% if post.has_holiday_studies or action == 'edit' and term.has_holiday_studies %}checked{% endif %}/>
+            <label class="form-check-label fw-700 small" for="has_holiday_studies">Enable</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">Selected classes (e.g. P6, P7) recalled after closing for extra coaching.</p>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label fw-700 small">Holiday Study Start</label>
+              <input type="date" name="holiday_study_start" class="form-control {% if errors.holiday_study_start %}is-invalid{% endif %}"
+                value="{% if post.holiday_study_start %}{{ post.holiday_study_start }}{% elif action == 'edit' %}{{ term.holiday_study_start|date:'Y-m-d' }}{% endif %}"/>
+              {% if errors.holiday_study_start %}<div class="invalid-feedback">{{ errors.holiday_study_start }}</div>{% endif %}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-700 small">Holiday Study End</label>
+              <input type="date" name="holiday_study_end" class="form-control {% if errors.holiday_study_end %}is-invalid{% endif %}"
+                value="{% if post.holiday_study_end %}{{ post.holiday_study_end }}{% elif action == 'edit' %}{{ term.holiday_study_end|date:'Y-m-d' }}{% endif %}"/>
+              {% if errors.holiday_study_end %}<div class="invalid-feedback">{{ errors.holiday_study_end }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-700 small">Classes Attending Holiday Studies</label>
+              <div class="row g-2">
+                {% for cls in all_classes %}
+                <div class="col-6 col-sm-4 col-md-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="holiday_study_classes"
+                      id="cls_{{ cls.pk }}" value="{{ cls.pk }}"
+                      {% if action == 'edit' %}
+                        {% if cls.pk in selected_class_ids %}checked{% endif %}
+                      {% endif %}
+                    />
+                    <label class="form-check-label small fw-600" for="cls_{{ cls.pk }}">{{ cls.display_name }}</label>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-700 small">Parent Note</label>
+              <textarea name="holiday_study_note" class="form-control" rows="3"
+                placeholder="e.g. Bring all books, report by 8:00 am, uniform required."
+              >{% if post.holiday_study_note %}{{ post.holiday_study_note }}{% elif action == 'edit' %}{{ term.holiday_study_note }}{% endif %}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-plus-lg{% endif %} me-1"></i>
+          {% if action == 'edit' %}Save Changes{% else %}Create Term{% endif %}
+        </button>
+        {% if action == 'edit' %}
+        <a href="{% url 'academics:term_detail_overview' term.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        {% else %}
+        <a href="{% url 'academics:term_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- Right: help -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-primary-subtle sticky-top" style="top:76px;">
+        <div class="card-header py-3 bg-primary-subtle">
+          <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-info-circle me-2"></i>Term Calendar Guide</h6>
+        </div>
+        <div class="card-body small text-secondary">
+          <div class="fw-700 text-dark mb-1">Timeline Order</div>
+          <ol class="ps-3 mb-3">
+            <li><strong>start_date</strong> — Term opens</li>
+            <li><strong>BOT</strong> — First 1–2 weeks</li>
+            <li><strong>MOT</strong> — Midway through term</li>
+            <li><strong>end_date</strong> — Last lesson day</li>
+            <li><strong>EOT</strong> — Terminal exam</li>
+            <li><strong>closing_date</strong> — Students go home</li>
+            <li><strong>Holiday Studies</strong> — P6/P7 coaching</li>
+            <li><strong>opening_date</strong> — Next term opens</li>
+          </ol>
+          <div class="fw-700 text-dark mb-1">Academic Year</div>
+          <p class="mb-0">Derived automatically from <em>start_date</em>. Uganda's academic year = calendar year.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+{% endblock %}

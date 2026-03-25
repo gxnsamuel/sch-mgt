@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="cover-container d-flex w-100 h-100 p-3 mx-auto flex-column">
+    <main class="px-3">
+      <h1 class="display-1 text-center fw-bolder text-primary text- text-capitalize">Joks School Management <br> System</h1>
+      <p class="lead fw-medium text-center w-75 mx-auto mt-4">JOKS School stands as a beacon of learning, combining traditional values with modern educational methodologies. Our campus features smart classrooms, science labs, sports facilities and creative arts studios.</p>
+      <p class="lead w-50 mx-auto mt-5 d-flex justify-content-between">
+        <a href="{% url 'login' %}" class="btn btn-lg btn-primary fs-3  fw-bold ">Login Now</a>
+        <a href="#" class="btn btn-lg btn-dark fs-3  fw-bold ">Back Home</a>
+      </p>
+    </main>
+  </div>
+{% endblock %}
+

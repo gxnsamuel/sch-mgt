@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Activate Account{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-3 mb-3">
+                                <i class="bi bi-envelope-check-fill text-success" style="font-size: 3rem;"></i>
+                            </div>
+                            <h4 class="fw-bold">Verify Your Email</h4>
+                            <p class="text-muted small">
+                                Hi {{ first_name }}, we sent a 6-digit code to<br>
+                                <strong>{{ email }}</strong>
+                            </p>
+                        </div>
+                        
+                        <form method="post" action="{% url 'activate_account' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="verify">
+                            
+                            <div class="mb-4">
+                                <label for="otp" class="form-label fw-semibold text-center d-block">
+                                    Enter Verification Code
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg text-center fw-bold" 
+                                       id="otp" 
+                                       name="otp" 
+                                       placeholder="000000"
+                                       maxlength="6"
+                                       pattern="[0-9]{6}"
+                                       style="letter-spacing: 0.5rem; font-size: 1.5rem;"
+                                       required
+                                       autofocus>
+                                <small class="form-text text-muted d-block text-center mt-2">6-digit code</small>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="bi bi-check-circle"></i> Verify Code
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-center">
+                            <p class="text-muted mb-3 small">Didn't receive the code?</p>
+                            <form method="post" action="{% url 'activate_account' %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="resend">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-arrow-clockwise"></i> Resend Code
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

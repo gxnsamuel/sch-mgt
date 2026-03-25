@@ -1,0 +1,614 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'accounts:user_list' %}" class="text-secondary">Users</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
+
+  {# Left: avatar + identity #}
+  <div class="d-flex align-items-center gap-3">
+
+    {# Avatar #}
+    {% if user_obj.user_type != 'parent' and user_obj.profile_photo %}
+      <img src="{{ user_obj.profile_photo.url }}" alt="{{ user_obj.full_name }}"
+           class="rounded-circle object-fit-cover flex-shrink-0"
+           style="width:64px;height:64px;"/>
+    {% else %}
+      <div class="rounded-circle d-flex align-items-center justify-content-center fw-800 flex-shrink-0
+                  {% if user_obj.user_type == 'parent' %}bg-primary text-white
+                  {% elif user_obj.user_type == 'teacher' %}bg-success text-white
+                  {% elif user_obj.user_type == 'admin' %}bg-danger text-white
+                  {% else %}bg-secondary text-white{% endif %}"
+           style="width:64px;height:64px;font-size:1.2rem;">
+        {{ user_obj.first_name|first|upper }}{{ user_obj.last_name|first|upper }}
+      </div>
+    {% endif %}
+
+    {# Name + meta #}
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h4 class="fw-800 mb-0">{{ user_obj.full_name }}</h4>
+        <span class="badge
+          {% if user_obj.user_type == 'parent' %}bg-primary
+          {% elif user_obj.user_type == 'teacher' %}bg-success
+          {% elif user_obj.user_type == 'admin' %}bg-danger
+          {% else %}bg-secondary{% endif %}">
+          {{ type_label }}
+        </span>
+        {% if user_obj.is_active %}
+          <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Active</span>
+        {% else %}
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Inactive</span>
+        {% endif %}
+      </div>
+      <div class="text-muted small mt-1 d-flex gap-3 flex-wrap">
+        {% if user_obj.user_type == 'parent' %}
+          <span><i class="bi bi-upc me-1"></i><code>{{ user_obj.parent_id|default:"—" }}</code></span>
+        {% else %}
+          <span><i class="bi bi-person-badge me-1"></i><code>{{ user_obj.username }}</code></span>
+          {% if profile %}<span><i class="bi bi-hash me-1"></i>{{ profile.employee_id }}</span>{% endif %}
+        {% endif %}
+        {% if user_obj.phone %}<span><i class="bi bi-phone me-1"></i>{{ user_obj.phone }}</span>{% endif %}
+        {% if user_obj.email %}<span><i class="bi bi-envelope me-1"></i>{{ user_obj.email }}</span>{% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  {# Right: action buttons #}
+  <div class="d-flex gap-2 flex-wrap align-items-start">
+    {% if user_obj.user_type == 'parent' %}
+    <a href="{% url 'accounts:register_parent' %}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    {% else %}
+    <a href="{% url 'accounts:register_staff' %}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    {% endif %}
+
+    {% if user_obj.pk != request.user.pk %}
+    <form method="post" action="{% url 'accounts:user_toggle_active' user_obj.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+      <button type="submit"
+        class="btn btn-sm {% if user_obj.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+        <i class="bi {% if user_obj.is_active %}bi-person-dash{% else %}bi-person-check{% endif %} me-1"></i>
+        {% if user_obj.is_active %}Deactivate{% else %}Activate{% endif %}
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+</div>
+
+
+<div class="row g-4 mb-4">
+
+  {# ── Personal Details card ── #}
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-person me-2 text-primary"></i>Personal Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">Full Name</dt>
+          <dd class="col-7 fw-600">{{ user_obj.full_name }}</dd>
+
+          {% if user_obj.other_names %}
+          <dt class="col-5 text-muted fw-700 text-uppercase">Other Names</dt>
+          <dd class="col-7">{{ user_obj.other_names }}</dd>
+          {% endif %}
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">Gender</dt>
+          <dd class="col-7">{{ user_obj.get_gender_display|default:"—" }}</dd>
+
+          {% if user_obj.nin %}
+          <dt class="col-5 text-muted fw-700 text-uppercase">NIN</dt>
+          <dd class="col-7"><code>{{ user_obj.nin }}</code></dd>
+          {% endif %}
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">Phone</dt>
+          <dd class="col-7">{{ user_obj.phone|default:"—" }}</dd>
+
+          {% if user_obj.alt_phone %}
+          <dt class="col-5 text-muted fw-700 text-uppercase">Alt Phone</dt>
+          <dd class="col-7">{{ user_obj.alt_phone }}</dd>
+          {% endif %}
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">Email</dt>
+          <dd class="col-7">{{ user_obj.email|default:"—" }}</dd>
+
+          {% if user_obj.address %}
+          <dt class="col-5 text-muted fw-700 text-uppercase">Address</dt>
+          <dd class="col-7">{{ user_obj.address }}</dd>
+          {% endif %}
+
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  {# ── Account Details card ── #}
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-shield-lock me-2 text-info"></i>Account Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">User Type</dt>
+          <dd class="col-7">
+            <span class="badge
+              {% if user_obj.user_type == 'parent' %}bg-primary
+              {% elif user_obj.user_type == 'teacher' %}bg-success
+              {% elif user_obj.user_type == 'admin' %}bg-danger
+              {% else %}bg-secondary{% endif %}">
+              {{ type_label }}
+            </span>
+          </dd>
+
+          {% if user_obj.user_type == 'parent' %}
+          <dt class="col-5 text-muted fw-700 text-uppercase">Parent ID</dt>
+          <dd class="col-7"><code class="fw-700">{{ user_obj.parent_id|default:"—" }}</code></dd>
+          {% else %}
+          <dt class="col-5 text-muted fw-700 text-uppercase">Username</dt>
+          <dd class="col-7"><code>{{ user_obj.username }}</code></dd>
+          {% endif %}
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">Status</dt>
+          <dd class="col-7">
+            {% if user_obj.is_active %}
+              <span class="badge bg-success rounded-pill">Active</span>
+            {% else %}
+              <span class="badge bg-danger rounded-pill">Inactive</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">Admin Access</dt>
+          <dd class="col-7">
+            {% if user_obj.is_staff %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Yes</span>
+            {% else %}
+              <span class="text-muted">No</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">Joined</dt>
+          <dd class="col-7 text-muted">{{ user_obj.date_joined|date:"d M Y" }}</dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase">Last Login</dt>
+          <dd class="col-7 text-muted">{{ user_obj.last_login|date:"d M Y, H:i"|default:"Never" }}</dd>
+
+        </dl>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+
+{% if user_obj.user_type == 'parent' %}
+
+  {% if profile %}
+
+  <div class="row g-4 mb-4">
+
+    {# ── Guardian Details ── #}
+    <div class="col-12 col-md-6">
+      <div class="card h-100">
+        <div class="card-header py-3">
+          <h6 class="fw-700 mb-0">
+            <i class="bi bi-heart me-2 text-danger"></i>Guardian Details
+          </h6>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0 small">
+
+            <dt class="col-5 text-muted fw-700 text-uppercase">Relationship</dt>
+            <dd class="col-7 fw-600">{{ profile.get_relationship_display|default:"—" }}</dd>
+
+            {% if profile.occupation %}
+            <dt class="col-5 text-muted fw-700 text-uppercase">Occupation</dt>
+            <dd class="col-7">{{ profile.occupation }}</dd>
+            {% endif %}
+
+            {% if profile.employer %}
+            <dt class="col-5 text-muted fw-700 text-uppercase">Employer</dt>
+            <dd class="col-7">{{ profile.employer }}</dd>
+            {% endif %}
+
+            {% if profile.work_phone %}
+            <dt class="col-5 text-muted fw-700 text-uppercase">Work Phone</dt>
+            <dd class="col-7">{{ profile.work_phone }}</dd>
+            {% endif %}
+
+            {% if profile.work_address %}
+            <dt class="col-5 text-muted fw-700 text-uppercase">Work Address</dt>
+            <dd class="col-7">{{ profile.work_address }}</dd>
+            {% endif %}
+
+            {% if profile.religion %}
+            <dt class="col-5 text-muted fw-700 text-uppercase">Religion</dt>
+            <dd class="col-7">{{ profile.religion }}</dd>
+            {% endif %}
+
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    {# ── Location ── #}
+    <div class="col-12 col-md-6">
+      <div class="card h-100">
+        <div class="card-header py-3">
+          <h6 class="fw-700 mb-0">
+            <i class="bi bi-geo-alt me-2 text-warning"></i>Uganda Location
+          </h6>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0 small">
+
+            <dt class="col-5 text-muted fw-700 text-uppercase">District</dt>
+            <dd class="col-7">{{ profile.district|default:"—" }}</dd>
+
+            <dt class="col-5 text-muted fw-700 text-uppercase">Sub-County</dt>
+            <dd class="col-7">{{ profile.sub_county|default:"—" }}</dd>
+
+            <dt class="col-5 text-muted fw-700 text-uppercase">Village</dt>
+            <dd class="col-7">{{ profile.village|default:"—" }}</dd>
+
+          </dl>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── Emergency Contact ── #}
+  {% if profile.emergency_contact_name or profile.emergency_contact_phone %}
+  <div class="card mb-4">
+    <div class="card-header py-3">
+      <h6 class="fw-700 mb-0">
+        <i class="bi bi-shield-exclamation me-2 text-danger"></i>Emergency Contact
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 small">
+        <div class="col-12 col-sm-4">
+          <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:0.72rem;">Name</div>
+          <div class="fw-600">{{ profile.emergency_contact_name|default:"—" }}</div>
+        </div>
+        <div class="col-12 col-sm-4">
+          <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:0.72rem;">Phone</div>
+          <div>{{ profile.emergency_contact_phone|default:"—" }}</div>
+        </div>
+        <div class="col-12 col-sm-4">
+          <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:0.72rem;">Relationship</div>
+          <div>{{ profile.emergency_contact_rel|default:"—" }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Children / Students ── #}
+  <div class="card mb-4">
+    <div class="card-header py-3 d-flex align-items-center justify-content-between">
+      <h6 class="fw-700 mb-0">
+        <i class="bi bi-people me-2 text-success"></i>
+        Linked Students
+        {% if children %}
+        <span class="badge bg-success ms-1">{{ children|length }}</span>
+        {% endif %}
+      </h6>
+    </div>
+
+    {% if children %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Admission No.</th>
+            <th>Class</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for child in children %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+                     style="width:34px;height:34px;font-size:0.75rem;">
+                  {{ child.first_name|first|upper }}{{ child.last_name|first|upper }}
+                </div>
+                <div class="fw-700">{{ child.last_name }}, {{ child.first_name }}</div>
+              </div>
+            </td>
+            <td><code class="small">{{ child.admission_number|default:"—" }}</code></td>
+            <td>
+              {% if child.current_class %}
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                {{ child.current_class.display_name }}
+              </span>
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if child.is_active %}
+              <span class="badge bg-success rounded-pill">Active</span>
+              {% else %}
+              <span class="badge bg-secondary rounded-pill">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+      <i class="bi bi-people fs-2 d-block mb-1 opacity-25"></i>
+      <div class="small fw-600">No students linked to this parent yet.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Parent notes ── #}
+  {% if profile.notes %}
+  <div class="card mb-4">
+    <div class="card-header py-3">
+      <h6 class="fw-700 mb-0">
+        <i class="bi bi-journal-text me-2 text-secondary"></i>Internal Notes
+      </h6>
+    </div>
+    <div class="card-body">
+      <p class="mb-0 small text-secondary" style="white-space:pre-wrap;">{{ profile.notes }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  {# No ParentProfile linked — data integrity issue #}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    No parent profile record found for this user. The profile may not have been
+    created correctly. Please contact the system administrator.
+  </div>
+  {% endif %}
+
+{# end parent branch #}
+
+{% else %}
+
+
+  {% if profile %}
+
+  {# ── Employment card ── #}
+  <div class="card mb-4">
+    <div class="card-header py-3">
+      <h6 class="fw-700 mb-0">
+        <i class="bi bi-briefcase me-2 text-warning"></i>Employment
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-4">
+
+        <div class="col-12 col-md-6">
+          <dl class="row mb-0 small">
+
+            <dt class="col-6 text-muted fw-700 text-uppercase">Employee ID</dt>
+            <dd class="col-6"><code class="fw-700">{{ profile.employee_id }}</code></dd>
+
+            <dt class="col-6 text-muted fw-700 text-uppercase">Role</dt>
+            <dd class="col-6 fw-600">{{ profile.get_role_display }}</dd>
+
+            <dt class="col-6 text-muted fw-700 text-uppercase">Employment Type</dt>
+            <dd class="col-6">
+              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                {{ profile.get_employment_type_display }}
+              </span>
+            </dd>
+
+            <dt class="col-6 text-muted fw-700 text-uppercase">Date Joined</dt>
+            <dd class="col-6">{{ profile.date_joined|date:"d M Y" }}</dd>
+
+            {% if profile.date_left %}
+            <dt class="col-6 text-muted fw-700 text-uppercase">Date Left</dt>
+            <dd class="col-6 text-danger fw-600">{{ profile.date_left|date:"d M Y" }}</dd>
+            {% endif %}
+
+            <dt class="col-6 text-muted fw-700 text-uppercase">Status</dt>
+            <dd class="col-6">
+              {% if profile.is_active %}
+                <span class="badge bg-success rounded-pill">Active</span>
+              {% else %}
+                <span class="badge bg-danger rounded-pill">Inactive</span>
+              {% endif %}
+            </dd>
+
+          </dl>
+        </div>
+
+        {# Teaching fields — only show if teacher #}
+        {% if user_obj.user_type == 'teacher' %}
+        <div class="col-12 col-md-6">
+          <dl class="row mb-0 small">
+
+            <dt class="col-6 text-muted fw-700 text-uppercase">Qualification</dt>
+            <dd class="col-6">{{ profile.get_qualification_display|default:"—" }}</dd>
+
+            <dt class="col-6 text-muted fw-700 text-uppercase">Specialization</dt>
+            <dd class="col-6">{{ profile.specialization|default:"—" }}</dd>
+
+            <dt class="col-6 text-muted fw-700 text-uppercase">Class Teacher</dt>
+            <dd class="col-6">
+              {% if profile.is_class_teacher %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Yes</span>
+              {% else %}
+                <span class="text-muted">No</span>
+              {% endif %}
+            </dd>
+
+            {% if profile.class_managed %}
+            <dt class="col-6 text-muted fw-700 text-uppercase">Class Managed</dt>
+            <dd class="col-6">
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                {{ profile.class_managed.display_name }}
+              </span>
+            </dd>
+            {% endif %}
+
+          </dl>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+  {# ── Payroll & HR ── #}
+  {% if profile.nssf_number or profile.tin_number or profile.salary_scale or profile.bank_name %}
+  <div class="card mb-4">
+    <div class="card-header py-3">
+      <h6 class="fw-700 mb-0">
+        <i class="bi bi-cash me-2 text-secondary"></i>Payroll &amp; HR
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 small">
+
+        {% if profile.nssf_number %}
+        <div class="col-6 col-md-3">
+          <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:0.72rem;">NSSF Number</div>
+          <code>{{ profile.nssf_number }}</code>
+        </div>
+        {% endif %}
+
+        {% if profile.tin_number %}
+        <div class="col-6 col-md-3">
+          <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:0.72rem;">TIN Number</div>
+          <code>{{ profile.tin_number }}</code>
+        </div>
+        {% endif %}
+
+        {% if profile.salary_scale %}
+        <div class="col-6 col-md-3">
+          <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:0.72rem;">Salary Scale</div>
+          {{ profile.salary_scale }}
+        </div>
+        {% endif %}
+
+        {% if profile.bank_name %}
+        <div class="col-6 col-md-3">
+          <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:0.72rem;">Bank</div>
+          {{ profile.bank_name }}
+        </div>
+        {% endif %}
+
+        {% if profile.bank_account %}
+        <div class="col-6 col-md-3">
+          <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:0.72rem;">Account No.</div>
+          <code>{{ profile.bank_account }}</code>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Signature ── #}
+  {% if profile.signature %}
+  <div class="card mb-4">
+    <div class="card-header py-3">
+      <h6 class="fw-700 mb-0">
+        <i class="bi bi-pen me-2 text-secondary"></i>Signature
+      </h6>
+    </div>
+    <div class="card-body">
+      <img src="{{ profile.signature.url }}" alt="Signature"
+           class="border rounded" style="max-height:80px;max-width:280px;"/>
+      <div class="text-muted small mt-1">Used on report cards and official letters.</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Bio ── #}
+  {% if profile.bio %}
+  <div class="card mb-4">
+    <div class="card-header py-3">
+      <h6 class="fw-700 mb-0">
+        <i class="bi bi-person-lines-fill me-2 text-primary"></i>Bio
+      </h6>
+    </div>
+    <div class="card-body">
+      <p class="mb-0 small" style="white-space:pre-wrap;">{{ profile.bio }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── HR Notes (admin-visible only) ── #}
+  {% if profile.notes and request.user.is_staff %}
+  <div class="card mb-4 border-warning-subtle">
+    <div class="card-header py-3 bg-warning-subtle border-warning-subtle">
+      <h6 class="fw-700 mb-0 text-warning">
+        <i class="bi bi-journal-text me-2"></i>HR Notes
+        <span class="badge bg-warning text-dark ms-2 small fw-600">Admin Only</span>
+      </h6>
+    </div>
+    <div class="card-body">
+      <p class="mb-0 small text-secondary" style="white-space:pre-wrap;">{{ profile.notes }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  {# No StaffProfile linked #}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    No staff profile record found for this user. The profile may not have been
+    created correctly. Please contact the system administrator.
+  </div>
+  {% endif %}
+
+{% endif %}
+{# end type dispatch #}
+
+
+<div class="text-muted small mt-2 d-flex gap-4 flex-wrap">
+  <span>
+    <i class="bi bi-calendar-plus me-1"></i>
+    Added {{ user_obj.date_joined|date:"d M Y" }}
+  </span>
+  {% if profile %}
+  <span>
+    <i class="bi bi-clock-history me-1"></i>
+    Profile updated {{ profile.updated_at|date:"d M Y, H:i" }}
+  </span>
+  {% endif %}
+</div>
+
+{% endblock %}

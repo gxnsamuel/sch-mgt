@@ -1,0 +1,168 @@
+{% load static %}
+{#
+  includes/header.html
+  Sticky top header with:
+    - Sidebar toggle button (desktop collapse + mobile open)
+    - Breadcrumbs (optional block)
+    - Search bar
+    - Notifications dropdown
+    - Theme toggle
+    - User profile dropdown
+#}
+
+<header class="app-header d-flex align-items-center px-3 px-md-4 gap-3">
+
+  {# ── Sidebar toggle ────────────────────────────────────────────────────── #}
+  <button class="btn btn-sm p-1 lh-1 border-0 bg-transparent text-secondary d-flex align-items-center justify-content-center"
+          data-sidebar-toggle
+          aria-label="Toggle sidebar"
+          style="width:36px;height:36px;font-size:1.25rem;">
+    <i class="bi bi-layout-sidebar"></i>
+  </button>
+
+  {# ── Breadcrumbs ───────────────────────────────────────────────────────── #}
+  <div class="me-auto d-none d-md-block">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+        <li class="breadcrumb-item">
+          <a href="{% url 'dashboard' %}" class="text-decoration-none" style="color:var(--clr-text-muted);">
+            <i class="bi bi-house-door me-1"></i>Home
+          </a>
+        </li>
+        {% block breadcrumbs %}
+        {% endblock %}
+      </ol>
+    </nav>
+    <h6 class="mb-0 mt-0 lh-1" style="font-family:'Poppins',sans-serif;font-size:.92rem;font-weight:600;">
+      {% block page_title %}Dashboard{% endblock %}
+    </h6>
+  </div>
+
+  {# ── Search ────────────────────────────────────────────────────────────── #}
+  <div class="d-none d-lg-flex position-relative" style="width:240px;">
+    <span class="position-absolute top-50 start-0 translate-middle-y ps-3" style="color:var(--clr-text-muted);pointer-events:none;">
+      <i class="bi bi-search" style="font-size:.85rem;"></i>
+    </span>
+    <input type="search"
+           class="form-control form-control-sm ps-5 rounded-pill"
+           placeholder="Quick search…"
+           style="background:var(--clr-bg);border-color:var(--clr-border);color:var(--clr-text);font-size:.82rem;" />
+  </div>
+
+  {# ── Current term pill ─────────────────────────────────────────────────── #}
+  {% if current_term %}
+    <span class="badge rounded-pill d-none d-xl-inline-flex align-items-center gap-1 py-2 px-3"
+          style="background:var(--clr-badge-bg);color:var(--clr-badge-txt);font-size:.73rem;font-weight:700;">
+      <i class="bi bi-calendar3-week me-1"></i>
+      Term {{ current_term.name }} &mdash; {{ current_term.academic_year }}
+    </span>
+  {% endif %}
+
+  {# ── Notifications ─────────────────────────────────────────────────────── #}
+  <div class="dropdown">
+    <button class="btn btn-sm p-1 lh-1 border-0 bg-transparent position-relative d-flex align-items-center justify-content-center"
+            data-bs-toggle="dropdown"
+            aria-label="Notifications"
+            style="width:36px;height:36px;font-size:1.2rem;color:var(--clr-text-muted);">
+      <i class="bi bi-bell-fill"></i>
+      <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+            style="background:var(--blue-mid);font-size:.55rem;padding:.25em .45em;">
+        {% if notifications_count %}{{ notifications_count }}{% else %}0{% endif %}
+        <span class="visually-hidden">notifications</span>
+      </span>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-0"
+         style="width:320px;background:var(--clr-bg-card);border:1px solid var(--clr-border) !important;">
+      <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom"
+           style="border-color:var(--clr-border) !important;">
+        <span class="fw-700" style="font-family:'Poppins',sans-serif;font-size:.85rem;">Notifications</span>
+        <a href="#" class="text-decoration-none" style="font-size:.75rem;color:var(--blue-mid);">Mark all read</a>
+      </div>
+      <div class="py-2" style="max-height:340px;overflow-y:auto;">
+        {% if notifications %}
+          {% for notif in notifications %}
+            <a href="{{ notif.url|default:'#' }}"
+               class="dropdown-item px-3 py-2 d-flex gap-3 align-items-start {% if not notif.is_read %}bg-info bg-opacity-10{% endif %}"
+               style="color:var(--clr-text);">
+              <div class="flex-shrink-0 mt-1 rounded-circle d-flex align-items-center justify-content-center"
+                   style="width:32px;height:32px;background:var(--blue-light);color:var(--navy-deep);">
+                <i class="bi bi-bell" style="font-size:.8rem;"></i>
+              </div>
+              <div>
+                <div style="font-size:.8rem;font-weight:600;">{{ notif.title }}</div>
+                <div style="font-size:.73rem;color:var(--clr-text-muted);">{{ notif.created_at|timesince }} ago</div>
+              </div>
+            </a>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-4" style="color:var(--clr-text-muted);">
+            <i class="bi bi-bell-slash d-block mb-2" style="font-size:1.5rem;"></i>
+            <span style="font-size:.8rem;">No notifications</span>
+          </div>
+        {% endif %}
+      </div>
+      <div class="border-top px-3 py-2" style="border-color:var(--clr-border) !important;">
+        <a href="{% url 'notifications_list' %}" class="text-decoration-none d-block text-center"
+           style="font-size:.78rem;color:var(--blue-mid);">View all notifications</a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Theme toggle ──────────────────────────────────────────────────────── #}
+  <button class="btn btn-sm p-1 lh-1 border-0 bg-transparent d-flex align-items-center justify-content-center"
+          data-theme-toggle
+          aria-label="Toggle dark/light mode"
+          style="width:36px;height:36px;font-size:1.1rem;color:var(--clr-text-muted);">
+    <i class="bi bi-moon-stars-fill" data-theme-icon></i>
+  </button>
+
+  {# ── User avatar / dropdown ────────────────────────────────────────────── #}
+  <div class="dropdown">
+    <button class="btn p-0 border-0 bg-transparent d-flex align-items-center gap-2"
+            data-bs-toggle="dropdown"
+            aria-label="User menu">
+      <div class="rounded-circle overflow-hidden d-flex align-items-center justify-content-center fw-700 text-white"
+           style="width:36px;height:36px;background:linear-gradient(135deg,var(--blue-mid),var(--navy-mid));font-size:.85rem;flex-shrink:0;">
+        {% if request.user.get_full_name %}
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        {% else %}
+          <i class="bi bi-person-fill"></i>
+        {% endif %}
+      </div>
+      <div class="d-none d-xl-block text-start" style="line-height:1.2;">
+        <div style="font-size:.82rem;font-weight:700;color:var(--clr-text);">
+          {{ request.user.get_full_name|default:request.user.username }}
+        </div>
+        <div style="font-size:.7rem;color:var(--clr-text-muted);text-transform:capitalize;">
+          {{ request.user.role|default:"Administrator" }}
+        </div>
+      </div>
+      <i class="bi bi-chevron-down d-none d-xl-block" style="font-size:.65rem;color:var(--clr-text-muted);"></i>
+    </button>
+
+    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 py-1 mt-1"
+         style="min-width:200px;background:var(--clr-bg-card);border:1px solid var(--clr-border) !important;">
+
+      {# User info header #}
+      <div class="px-3 py-2 border-bottom mb-1" style="border-color:var(--clr-border) !important;">
+        <div style="font-size:.82rem;font-weight:700;color:var(--clr-text);">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:.73rem;color:var(--clr-text-muted);">{{ request.user.email }}</div>
+      </div>
+
+      <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2" href="{% url 'accounts:profile' %}" style="font-size:.83rem;color:var(--clr-text);">
+        <i class="bi bi-person-circle" style="color:var(--blue-mid);"></i> My Profile
+      </a>
+      <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2" href="{% url 'accounts:settings' %}" style="font-size:.83rem;color:var(--clr-text);">
+        <i class="bi bi-gear" style="color:var(--blue-mid);"></i> Settings
+      </a>
+      <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2" href="#" data-theme-toggle style="font-size:.83rem;color:var(--clr-text);">
+        <i class="bi bi-moon-stars" style="color:var(--blue-mid);"></i> Toggle Dark Mode
+      </a>
+      <div class="dropdown-divider" style="border-color:var(--clr-border);"></div>
+      <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2" href="{% url 'accounts:logout' %}" style="font-size:.83rem;color:#dc3545;">
+        <i class="bi bi-box-arrow-right"></i> Sign Out
+      </a>
+    </div>
+  </div>
+
+</header>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Permission Assignment</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+</head>
+<body class="bg-white">
+
+<div class="container-fluid py-4 px-4">
+
+  <!-- Form Title -->
+  <h4 class="fw-semibold mb-1">Permission Assignments</h4>
+  <p class="text-muted small mb-4">
+    Assign actions and role access to each permission. Use the <strong>Action</strong> scope
+    (<em>My</em> = own records only, <em>All</em> = all records) then tick which roles
+    may perform each CRUD action on this permission.
+  </p>
+
+  <!-- Table -->
+  <div class="table-responsive border">
+    <table class="table table-bordered table-sm align-middle text-center mb-0">
+      <thead>
+
+        <!-- Row 1 — top-level group headers -->
+        <tr>
+          <th rowspan="3" class="align-middle text-start ps-2" style="min-width:160px;">
+            PERMISSIONS
+          </th>
+          <th colspan="2" class="text-center">ACTION</th>
+          <th colspan="3" class="text-center">CAN CREATE</th>
+          <th colspan="3" class="text-center">CAN EDIT</th>
+          <th colspan="3" class="text-center">CAN READ</th>
+          <th colspan="3" class="text-center">CAN DELETE</th>
+        </tr>
+
+        <!-- Row 2 — ROLES banner -->
+        <tr>
+          <th colspan="2" class="text-center">&nbsp;</th>
+          <th colspan="12" class="text-center">ROLES</th>
+        </tr>
+
+        <!-- Row 3 — leaf column headers -->
+        <tr>
+          <!-- Action scope -->
+          <th class="text-center">My</th>
+          <th class="text-center">All</th>
+          <!-- CAN CREATE roles -->
+          <th>Teacher</th>
+          <th>Staff</th>
+          <th>Parent</th>
+          <!-- CAN EDIT roles -->
+          <th>Teacher</th>
+          <th>Staff</th>
+          <th>Parent</th>
+          <!-- CAN READ roles -->
+          <th>Teacher</th>
+          <th>Staff</th>
+          <th>Parent</th>
+          <!-- CAN DELETE roles -->
+          <th>Teacher</th>
+          <th>Staff</th>
+          <th>Parent</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        <!--
+          Each <tr> = one Permission.
+          Naming convention:
+            perm[{id}][action_effect]          → radio  (can_my / can_all)
+            perm[{id}][can_create][teacher]    → checkbox
+            perm[{id}][can_create][staff]      → checkbox
+            perm[{id}][can_create][parent]     → checkbox
+            ... same pattern for can_edit, can_read, can_delete
+        -->
+
+        <!-- Permission row 1 -->
+        <tr>
+          <td class="text-start ps-2">School Fees</td>
+          <!-- Action scope — radio (one only per permission) -->
+          <td><input class="form-check-input" type="radio" name="perm[1][action_effect]" value="can_my"></td>
+          <td><input class="form-check-input" type="radio" name="perm[1][action_effect]" value="can_all"></td>
+          <!-- CAN CREATE -->
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_create][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_create][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_create][parent]"></td>
+          <!-- CAN EDIT -->
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_edit][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_edit][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_edit][parent]"></td>
+          <!-- CAN READ -->
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_read][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_read][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_read][parent]"></td>
+          <!-- CAN DELETE -->
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_delete][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_delete][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[1][can_delete][parent]"></td>
+        </tr>
+
+        <!-- Permission row 2 -->
+        <tr>
+          <td class="text-start ps-2">Student Records</td>
+          <td><input class="form-check-input" type="radio" name="perm[2][action_effect]" value="can_my"></td>
+          <td><input class="form-check-input" type="radio" name="perm[2][action_effect]" value="can_all"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_create][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_create][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_create][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_edit][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_edit][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_edit][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_read][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_read][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_read][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_delete][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_delete][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[2][can_delete][parent]"></td>
+        </tr>
+
+        <!-- Permission row 3 -->
+        <tr>
+          <td class="text-start ps-2">Timetable</td>
+          <td><input class="form-check-input" type="radio" name="perm[3][action_effect]" value="can_my"></td>
+          <td><input class="form-check-input" type="radio" name="perm[3][action_effect]" value="can_all"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_create][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_create][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_create][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_edit][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_edit][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_edit][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_read][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_read][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_read][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_delete][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_delete][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[3][can_delete][parent]"></td>
+        </tr>
+
+        <!-- Permission row 4 -->
+        <tr>
+          <td class="text-start ps-2">Attendance</td>
+          <td><input class="form-check-input" type="radio" name="perm[4][action_effect]" value="can_my"></td>
+          <td><input class="form-check-input" type="radio" name="perm[4][action_effect]" value="can_all"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_create][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_create][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_create][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_edit][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_edit][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_edit][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_read][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_read][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_read][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_delete][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_delete][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[4][can_delete][parent]"></td>
+        </tr>
+
+        <!-- Permission row 5 -->
+        <tr>
+          <td class="text-start ps-2">Reports</td>
+          <td><input class="form-check-input" type="radio" name="perm[5][action_effect]" value="can_my"></td>
+          <td><input class="form-check-input" type="radio" name="perm[5][action_effect]" value="can_all"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_create][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_create][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_create][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_edit][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_edit][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_edit][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_read][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_read][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_read][parent]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_delete][teacher]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_delete][staff]"></td>
+          <td><input class="form-check-input" type="checkbox" name="perm[5][can_delete][parent]"></td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div><!-- /table-responsive -->
+
+  <!-- Description below table -->
+  <p class="text-muted small mt-2 mb-4">
+    <strong>Action scope:</strong> <em>My</em> restricts the role to records they own;
+    <em>All</em> grants access to every record in the system.
+    Tick the roles that should be granted each action under the corresponding permission.
+    Admin has unrestricted access by default and is managed separately.
+  </p>
+
+  <!-- Action Buttons — right aligned -->
+  <div class="d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-outline-secondary">Cancel</button>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <button type="submit" class="btn btn-primary">Save &amp; Edit</button>
+    <button type="submit" class="btn btn-primary">Save &amp; Close</button>
+  </div>
+
+</div><!-- /container-fluid -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

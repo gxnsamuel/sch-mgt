@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify OTP – Account Setup{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-7 col-lg-5">
+
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+
+                        <div class="text-center mb-4">
+                            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:64px;height:64px;">
+                                <i class="bi bi-envelope-check-fill text-success fs-3"></i>
+                            </div>
+                            <h4 class="fw-bold mb-1">Check Your Email</h4>
+                            {% if first_name %}
+                                <p class="text-muted small">
+                                    Hi <strong>{{ first_name }}</strong>, we sent a 6-digit OTP to
+                                    <strong>{{ obfuscated }}</strong>.
+                                    Enter it below to continue your account setup.
+                                </p>
+                            {% else %}
+                                <p class="text-muted small">
+                                    We sent a 6-digit OTP to <strong>{{ obfuscated }}</strong>.
+                                    Enter it below to continue your account setup.
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Verify OTP form -->
+                        <form method="post" action="{% url 'verify_setupkey_otp' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="verify">
+
+                            <div class="mb-4">
+                                <label for="otp" class="form-label fw-semibold">One-Time Password (OTP)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="bi bi-123 text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           class="form-control border-start-0 ps-0 text-center fs-5 fw-bold tracking-wider"
+                                           id="otp"
+                                           name="otp"
+                                           placeholder="• • • • • •"
+                                           maxlength="6"
+                                           inputmode="numeric"
+                                           pattern="[0-9]{6}"
+                                           autocomplete="one-time-code"
+                                           required
+                                           autofocus>
+                                </div>
+                                <div class="form-text text-center">
+                                    <i class="bi bi-clock me-1"></i> OTP is valid for 10 minutes.
+                                </div>
+                            </div>
+
+                            <div class="d-grid mb-3">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="bi bi-check-circle me-1"></i> Verify OTP
+                                </button>
+                            </div>
+                        </form>
+
+                        <hr class="my-3">
+
+                        <!-- Resend / restart form -->
+                        <form method="post" action="{% url 'verify_setupkey_otp' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="resend">
+                            <div class="text-center">
+                                <p class="small text-muted mb-2">Didn't receive the OTP or it expired?</p>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Request New OTP
+                                </button>
+                                <p class="small text-muted mt-2 mb-0">
+                                    You will be asked to re-enter your setup key.
+                                </p>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="{% url 'login' %}" class="text-decoration-none small text-muted">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Login
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

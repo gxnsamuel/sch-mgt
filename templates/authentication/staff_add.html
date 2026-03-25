@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Staff Member{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">
+            <i class="bi bi-person-plus-fill text-primary me-2"></i>Add Staff Member
+        </h4>
+        <p class="text-muted small mb-0">Create a new staff account. Setup credentials will be emailed to them.</p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<div class="row justify-content-start">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="bi bi-person-vcard me-2 text-primary"></i>Staff Details
+                </h6>
+            </div>
+            <div class="card-body p-4">
+
+                <form method="post" action="{% url 'staff_add' %}">
+                    {% csrf_token %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label for="first_name" class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="first_name"
+                                   name="first_name"
+                                   placeholder="e.g. John"
+                                   required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="last_name" class="form-label fw-semibold">Last Name <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="last_name"
+                                   name="last_name"
+                                   placeholder="e.g. Doe"
+                                   required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-envelope text-muted"></i>
+                            </span>
+                            <input type="email"
+                                   class="form-control"
+                                   id="email"
+                                   name="email"
+                                   placeholder="staff@example.com"
+                                   required>
+                        </div>
+                        <div class="form-text">Setup credentials will be sent to this address.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-telephone text-muted"></i>
+                            </span>
+                            <input type="text"
+                                   class="form-control"
+                                   id="phone_number"
+                                   name="phone_number"
+                                   placeholder="+256 700 000 000"
+                                   required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label for="country" class="form-label fw-semibold">Country <span class="text-danger">*</span></label>
+                            <select class="form-select" id="country" name="country" required>
+                                <option value="">-- Select Country --</option>
+                                {% for c in countries %}
+                                    <option value="{{ c }}">{{ c }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="gender" class="form-label fw-semibold">Gender <span class="text-danger">*</span></label>
+                            <select class="form-select" id="gender" name="gender" required>
+                                <option value="">-- Select Gender --</option>
+                                {% for g in genders %}
+                                    <option value="{{ g }}">{{ g|capfirst|cut:"_" }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Info box -->
+                    <div class="alert alert-info d-flex gap-2 align-items-start py-3" role="alert">
+                        <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+                        <div class="small">
+                            <strong>Automatic username &amp; setup key</strong><br>
+                            A unique username will be generated from the staff member's first name,
+                            and a one-time setup key will be created and emailed to them along with
+                            instructions to activate their account.
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-person-check me-1"></i> Create Staff Account
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
