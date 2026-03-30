@@ -3,9 +3,16 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 
 
+
+
+
+
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CHOICES
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 GENDER_CHOICES = [
     ('male',              'Male'),
@@ -20,6 +27,7 @@ USER_TYPE_CHOICES = [
     ('staff',   'Support Staff'),
     ('admin',   'Administrator'),
 ]
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -123,7 +131,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     date_joined      = models.DateTimeField(auto_now_add=True)
     updated_at       = models.DateTimeField(auto_now=True)
 
+
+
     objects          = CustomUserManager()
+
 
     USERNAME_FIELD   = 'username'
     REQUIRED_FIELDS  = ['first_name', 'last_name']
@@ -178,103 +189,4 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 
 
-# ──────────────────────────────────────────
-# PERMISSION MODEL
-# ──────────────────────────────────────────
 
-class Permission(models.Model):
-
-    permission_title = models.CharField(max_length=255)
-    permission_code  = models.CharField(max_length=100, unique=True)
-    description      = models.TextField(blank=True)
-    date             = models.DateField(auto_now_add=True)
-    is_active        = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name        = "Permission"
-        verbose_name_plural = "Permissions"
-        ordering            = ["permission_title"]
-
-    def __str__(self):
-        return f"{self.permission_title} [{self.permission_code}]"
-
-
-
-
-# ──────────────────────────────────────────
-# USER TYPE PERMISSION ASSIGNMENT MODEL
-# ──────────────────────────────────────────
-
-class UserTypePermission(models.Model):
-
-    # ── user type ──
-    ADMIN   = "admin"
-    STAFF   = "staff"
-    PARENT  = "parent"
-    TEACHER = "teacher"
-
-    USER_TYPE_CHOICES = [
-        (ADMIN,   "Admin"),
-        (STAFF,   "Staff"),
-        (PARENT,  "Parent"),
-        (TEACHER, "Teacher"),
-    ]
-
-    # ── action effect scope ──
-    CAN_MY  = "can_my"
-    CAN_ALL = "can_all"
-
-    ACTION_EFFECT_CHOICES = [
-        (CAN_MY,  "Can My  – own records only"),
-        (CAN_ALL, "Can All – all records"),
-    ]
-
-    permission    = models.ForeignKey(
-                        Permission,
-                        on_delete=models.CASCADE,
-                        related_name="user_type_assignments",
-                    )
-    user_type     = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
-
-    # ── actions ──
-    can_create    = models.BooleanField(default=False)
-    can_read      = models.BooleanField(default=False)
-    can_edit      = models.BooleanField(default=False)
-    can_delete    = models.BooleanField(default=False)
-
-    # ── scope ──
-    action_effect = models.CharField(
-                        max_length=10,
-                        choices=ACTION_EFFECT_CHOICES,
-                        default=CAN_MY,
-                    )
-
-    assigned_at   = models.DateTimeField(auto_now_add=True)
-    updated_at    = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name        = "User Type Permission"
-        verbose_name_plural = "User Type Permissions"
-        # A user_type cannot hold the same permission more than once.
-        # But the same permission CAN exist across different user_types
-        # (e.g. school_fees → admin with edit, school_fees → teacher with read only).
-        constraints = [
-            models.UniqueConstraint(
-                fields=["permission", "user_type"],
-                name="unique_permission_per_user_type",
-            )
-        ]
-        ordering = ["user_type", "permission__permission_title"]
-
-    def __str__(self):
-        actions = ", ".join(filter(None, [
-            "create" if self.can_create else "",
-            "read"   if self.can_read   else "",
-            "edit"   if self.can_edit   else "",
-            "delete" if self.can_delete else "",
-        ])) or "no actions"
-        return (
-            f"{self.get_user_type_display()} → "
-            f"{self.permission.permission_title} "
-            f"[{actions}] ({self.get_action_effect_display()})"
-        )

@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "fees",
     "school",
     "students",
+    "permissions",
 ]
 
 MIDDLEWARE = [

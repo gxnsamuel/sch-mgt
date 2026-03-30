@@ -13,6 +13,7 @@ urlpatterns = [
     path("communication/", include("communication.urls",  namespace="communication")),
     path("fees/", include("fees.urls",  namespace="fees")),
     path("school/", include("school.urls",  namespace="school")),
+    path("permissions/", include("permissions.urls",  namespace="permissions")),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

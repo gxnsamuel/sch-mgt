@@ -21,6 +21,7 @@ from academics.models import SchoolClass
 from accounts.models import ParentProfile, StaffProfile, USER_TYPE_CHOICES
 from accounts.utils import (
     generate_employee_id,
+    generate_temp_key,
     generate_parent_id,
     get_user_list_stats,
     validate_and_parse_parent_registration,
@@ -245,11 +246,10 @@ def register_staff(request):
     try:
         with transaction.atomic():
             employee_id = generate_employee_id()
+            password = generate_temp_key()
 
             user = User.objects.create_user(
-                username    = user_c['username'],
                 email       = user_c.get('email', ''),
-                password    = user_c.pop('password'),
                 user_type   = user_c['user_type'],
                 first_name  = user_c.get('first_name', ''),
                 last_name   = user_c.get('last_name', ''),
@@ -261,6 +261,10 @@ def register_staff(request):
                 nin         = user_c.get('nin', ''),
                 # Staff are granted is_staff so they can access the admin
                 is_staff    = user_c['user_type'] in ('admin',),
+
+                password    = password,
+                username    = employee_id,
+                is_active   = False
             )
 
             # Handle photo upload

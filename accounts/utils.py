@@ -42,6 +42,29 @@ def generate_employee_id() -> str:
     return f'{prefix}{seq:04d}'
 
 
+import random
+import string
+def generate_temp_key(length=12):
+    characters = string.ascii_letters + string.digits
+
+    # Ensure at least one lowercase, one uppercase, one digit
+    password = [
+        random.choice(string.ascii_lowercase),
+        random.choice(string.ascii_uppercase),
+        random.choice(string.digits),
+    ]
+
+    # Fill remaining characters
+    password += [random.choice(characters) for _ in range(length - 3)]
+
+    # Shuffle for randomness
+    random.shuffle(password)
+
+    return "".join(password)
+
+
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  SHARED FIELD VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -221,33 +244,33 @@ def validate_and_parse_staff_registration(post: dict) -> tuple[dict, dict, dict]
     else:
         user_cleaned['user_type'] = user_type
 
-    # username (unique)
-    username = (post.get('username') or '').strip()
-    if not username:
-        errors['username'] = 'Username is required.'
-    elif len(username) > 50:
-        errors['username'] = 'Username must not exceed 50 characters.'
-    elif ' ' in username:
-        errors['username'] = 'Username must not contain spaces.'
-    elif User.objects.filter(username=username).exists():
-        errors['username'] = f'Username "{username}" is already taken.'
-    else:
-        user_cleaned['username'] = username
+    # # username (unique)
+    # username = (post.get('username') or '').strip()
+    # if not username:
+    #     errors['username'] = 'Username is required.'
+    # elif len(username) > 50:
+    #     errors['username'] = 'Username must not exceed 50 characters.'
+    # elif ' ' in username:
+    #     errors['username'] = 'Username must not contain spaces.'
+    # elif User.objects.filter(username=username).exists():
+    #     errors['username'] = f'Username "{username}" is already taken.'
+    # else:
+    #     user_cleaned['username'] = username
 
     # Shared user fields
     _validate_shared_user_fields(post, errors, user_cleaned)
 
     # Password
-    password  = (post.get('password') or '').strip()
-    password2 = (post.get('password2') or '').strip()
-    if not password:
-        errors['password'] = 'Password is required.'
-    elif len(password) < 8:
-        errors['password'] = 'Password must be at least 8 characters.'
-    elif password != password2:
-        errors['password2'] = 'Passwords do not match.'
-    else:
-        user_cleaned['password'] = password
+    # password  = (post.get('password') or '').strip()
+    # password2 = (post.get('password2') or '').strip()
+    # if not password:
+    #     errors['password'] = 'Password is required.'
+    # elif len(password) < 8:
+    #     errors['password'] = 'Password must be at least 8 characters.'
+    # elif password != password2:
+    #     errors['password2'] = 'Passwords do not match.'
+    # else:
+    #     user_cleaned['password'] = password
 
     # StaffProfile fields
     role = (post.get('role') or '').strip()
@@ -292,6 +315,7 @@ def validate_and_parse_staff_registration(post: dict) -> tuple[dict, dict, dict]
     prof_cleaned['is_class_teacher']  = (
         str(post.get('is_class_teacher', '')).lower() in ('1', 'true', 'on', 'yes')
     )
+
     prof_cleaned['nssf_number']       = (post.get('nssf_number') or '').strip()
     prof_cleaned['tin_number']        = (post.get('tin_number') or '').strip()
     prof_cleaned['salary_scale']      = (post.get('salary_scale') or '').strip()
@@ -299,6 +323,8 @@ def validate_and_parse_staff_registration(post: dict) -> tuple[dict, dict, dict]
     prof_cleaned['bank_account']      = (post.get('bank_account') or '').strip()
     prof_cleaned['bio']               = (post.get('bio') or '').strip()
     prof_cleaned['notes']             = (post.get('notes') or '').strip()
+
+    
 
     # class_managed FK (optional)
     class_id = (post.get('class_managed') or '').strip()
