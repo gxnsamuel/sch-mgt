@@ -57,7 +57,7 @@
   {% for acc in accordions %}
   <span class="badge px-3 py-2 border
     {% if acc.is_saved %}bg-success-subtle text-success border-success-subtle
-    {% else %}bg-secondary-subtle text-secondary border-secondary-subtle{% endif %}">
+    {% else %}bg-secondary-subtle text-secondary border-primary-subtle{% endif %}">
     {% if acc.is_saved %}
     <i class="bi bi-check-circle-fill me-1"></i>
     {% else %}
@@ -68,28 +68,26 @@
   {% endfor %}
 </div>
 
-{# ══════════════════════════════════════════════════
-   ROLE ACCORDIONS
-══════════════════════════════════════════════════ #}
+
 <div class="accordion" id="roles-accordion">
   {% for acc in accordions %}
 
-  <div class="accordion-item border mb-3 rounded" id="accordion-item-{{ acc.role_key }}">
+  <div class="accordion-item border border-primary bg-primary-subtle mb-3 rounded" id="accordion-item-{{ acc.role_key }}">
 
     <h2 class="accordion-header">
-      <button class="accordion-button fw-700
+      <button class="accordion-button shadow-none bg-transparent  border-0 fw-700
         {% if not forloop.first and not acc.is_saved %}collapsed{% endif %}"
         type="button"
         data-bs-toggle="collapse"
         data-bs-target="#collapse-{{ acc.role_key }}"
         aria-expanded="{% if forloop.first or acc.is_saved %}true{% else %}false{% endif %}">
 
-        <span class="me-3">{{ acc.role_label }}</span>
+        <span class="me-3 fs-5 fw-bold text-dark text-uppercase">{{ acc.role_label }}</span>
 
         {# Saved badge — appears after role is saved #}
         {% if acc.is_saved %}
-        <span class="badge bg-success me-2" id="saved-badge-{{ acc.role_key }}">
-          <i class="bi bi-check-circle-fill me-1"></i>Saved
+        <span class="btn btn-sm   border-0 text-success bg-transparent fw-bold me-2" id="saved-badge-{{ acc.role_key }}">
+          <i class="bi bi-check-circle-fill  me-1"></i>Saved
         </span>
         {% else %}
         <span class="badge bg-secondary-subtle text-secondary border me-2"
@@ -102,11 +100,11 @@
     </h2>
 
     <div id="collapse-{{ acc.role_key }}"
-         class="accordion-collapse collapse
+         class="accordion-collapse  collapse
            {% if forloop.first or acc.is_saved %}show{% endif %}"
          data-bs-parent="">
 
-      <div class="accordion-body p-0">
+      <div class="accordion-body  p-0">
 
         <form method="post" action="{% url 'permissions:assign_save_role' %}"
               id="form-{{ acc.role_key }}">
@@ -115,61 +113,59 @@
 
           {# ── Permission matrix table ── #}
           <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 small">
-              <thead class="table-light">
+            <table class="table table-hover table-primary border-top border-primary table-borderless align-middle mb-0 small">
+              <thead>
                 <tr>
-                  <th style="min-width:200px;">Permission</th>
+                  <th class="fw-bold text-primary" style="min-width:200px;">Permission</th>
 
                   {# Tasks sub-columns #}
-                  <th colspan="4" class="text-center border-start">
-                    <span class="text-muted fw-700 text-uppercase"
-                          style="font-size:.65rem;letter-spacing:.06em;">Tasks / Actions</span>
+                  <th colspan="4" class="text-center border-start border-primary text-uppercase fw-bold text-primary">
+                    <span class="text-uppercase fw-bold text-primary">Tasks / Actions</span>
                   </th>
 
                   {# Action limit sub-columns #}
-                  <th colspan="2" class="text-center border-start">
-                    <span class="text-muted fw-700 text-uppercase"
-                          style="font-size:.65rem;letter-spacing:.06em;">Action Limit</span>
+                  <th colspan="2" class="text-center border-start border-primary text-uppercase fw-bold text-primary">
+                    <span class="text-uppercase fw-bold text-primary">Action Limit</span>
                   </th>
                 </tr>
-                <tr class="table-light border-top-0">
+                <tr class="border-top-0">
                   <th></th>
                   {# tasks #}
-                  <th class="text-center border-start">
-                    <span class="text-success fw-700" title="Can Add">
-                      <i class="bi bi-plus-circle"></i><br/>
-                      <span style="font-size:.65rem;">Add</span>
+                  <th class="text-center border-start border-primary">
+                    <span class="text-dark fw-700" title="Can Add">
+                      <i class="bi bi-plus-circle me-2"></i>
+                      <span>Add</span>
                     </span>
                   </th>
                   <th class="text-center">
-                    <span class="text-primary fw-700" title="Can Read">
-                      <i class="bi bi-eye"></i><br/>
+                    <span class="text-dark fw-700" title="Can Read">
+                      <i class="bi bi-eye me-2"></i>
                       <span style="font-size:.65rem;">Read</span>
+                    </span>                  
+                  </th>
+                  <th class="text-center">
+                    <span class="text-dark fw-700" title="Can Edit">
+                      <i class="bi bi-pencil me-2"></i>
+                      <span>Edit</span>
                     </span>
                   </th>
                   <th class="text-center">
-                    <span class="text-warning fw-700" title="Can Edit">
-                      <i class="bi bi-pencil"></i><br/>
-                      <span style="font-size:.65rem;">Edit</span>
-                    </span>
-                  </th>
-                  <th class="text-center">
-                    <span class="text-danger fw-700" title="Can Delete">
-                      <i class="bi bi-trash"></i><br/>
-                      <span style="font-size:.65rem;">Delete</span>
+                    <span class="text-dark fw-700" title="Can Delete">
+                      <i class="bi bi-trash me-2"></i>
+                      <span>Delete</span>
                     </span>
                   </th>
                   {# scope #}
-                  <th class="text-center border-start">
-                    <span class="text-info fw-700" title="My — own records only">
-                      <i class="bi bi-person-fill"></i><br/>
-                      <span style="font-size:.65rem;">My</span>
+                  <th class="text-center border-start border-primary">
+                    <span class="text-dark  fw-bold" title="My — own records only">
+                      <i class="bi bi-person-fill me-2"></i>
+                      <span>My</span>
                     </span>
                   </th>
                   <th class="text-center">
-                    <span class="text-warning fw-700" title="All — every record">
-                      <i class="bi bi-people-fill"></i><br/>
-                      <span style="font-size:.65rem;">All</span>
+                    <span class="text-dark fw-700" title="All — every record">
+                      <i class="bi bi-people-fill me-2"></i>
+                      <span>All</span>
                     </span>
                   </th>
                 </tr>
@@ -177,54 +173,51 @@
               <tbody>
                 {% for row in acc.rows %}
                 <tr>
-                  <td>
-                    <div class="fw-700">{{ row.permission.permission_title }}</div>
-                    <code class="text-muted" style="font-size:.7rem;">
-                      {{ row.permission.permission_code }}
-                    </code>
+                  <td class=" {% if forloop.last %} border-bottom-0 border-top border-start-0 border-end {% else %} border-bottom border-start-0 border-end border-top {% endif %} border-primary">
+                    <div class="fw-700 fw-bol">{{ row.permission.permission_title }}</div>
                     {% if row.is_pending %}
-                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1"
+                    <span class="btn btn-sm py-1 bg-warning-subtle text-warning border border-warning-subtle ms-1"
                           style="font-size:.65rem;">Pending</span>
                     {% endif %}
                   </td>
 
                   {# ── Task checkboxes ── #}
-                  <td class="text-center border-start">
+                  <td class="text-center   {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
                     <input type="checkbox"
-                      class="form-check-input"
+                      class="form-check-input border-primary"
                       name="perm_{{ row.permission.pk }}_create"
                       {% if row.can_create %}checked{% endif %}/>
                   </td>
-                  <td class="text-center">
+                  <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
                     <input type="checkbox"
-                      class="form-check-input"
+                      class="form-check-input border-primary"
                       name="perm_{{ row.permission.pk }}_read"
                       {% if row.can_read %}checked{% endif %}/>
                   </td>
-                  <td class="text-center">
+                  <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
                     <input type="checkbox"
-                      class="form-check-input"
+                      class="form-check-input border-primary"
                       name="perm_{{ row.permission.pk }}_edit"
                       {% if row.can_edit %}checked{% endif %}/>
                   </td>
-                  <td class="text-center">
+                  <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
                     <input type="checkbox"
-                      class="form-check-input"
+                      class="form-check-input border-primary"
                       name="perm_{{ row.permission.pk }}_delete"
                       {% if row.can_delete %}checked{% endif %}/>
                   </td>
 
                   {# ── Scope radio buttons ── #}
-                  <td class="text-center border-start">
+                  <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
                     <input type="radio"
-                      class="form-check-input"
+                      class="form-check-input border-primary"
                       name="perm_{{ row.permission.pk }}_limit"
                       value="{{ can_my }}"
                       {% if row.action_effect == can_my %}checked{% endif %}/>
                   </td>
-                  <td class="text-center">
+                  <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end-0 {% else %} border-start border-top border-bottom border-end-0 {% endif %} border-primary">
                     <input type="radio"
-                      class="form-check-input"
+                      class="form-check-input border-primary"
                       name="perm_{{ row.permission.pk }}_limit"
                       value="{{ can_all }}"
                       {% if row.action_effect == can_all %}checked{% endif %}/>
@@ -245,13 +238,13 @@
 
           {# ── Save button (per accordion) ── #}
           <div class="px-4 py-3 d-flex align-items-center justify-content-between
-                       border-top bg-light">
+                       border-top border-primary">
             <div class="small text-muted">
               <i class="bi bi-info-circle me-1"></i>
               Saved as <strong>pending</strong> — activate by confirming in Step 3.
             </div>
             <button type="submit" class="btn btn-success btn-sm px-4">
-              <i class="bi bi-save me-1"></i>Save {{ acc.role_label }}
+              <i class="bi bi-save me-1"></i>Save To {{ acc.role_label }}
             </button>
           </div>
 
@@ -264,17 +257,17 @@
 </div>
 
 {# ── Bottom continue button (mirrors top) ── #}
-<div class="d-flex justify-content-end mt-4">
+<div class="d-flex justify-content-center mt-5 mt-4">
   {% if all_saved %}
-  <a href="{% url 'permissions:assign_review' %}" class="btn btn-primary px-5">
+  <a href="{% url 'permissions:assign_review' %}" class="btn btn-lg btn-primary px-5">
     Continue to Review <i class="bi bi-chevron-right ms-1"></i>
   </a>
   {% else %}
   <div class="text-end">
-    <button class="btn btn-primary px-5" disabled>
+    <button class="btn btn-lg btn-primary px-5" disabled>
       Continue to Review <i class="bi bi-chevron-right ms-1"></i>
     </button>
-    <div class="text-muted small mt-1">
+    <div class="text-muted small fw-semibold mt-1">
       Save all
       {{ chosen_roles|length }} role{{ chosen_roles|length|pluralize }}
       to continue

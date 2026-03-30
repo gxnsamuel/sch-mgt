@@ -158,37 +158,32 @@ def validate_and_parse_permission(post: dict) -> tuple[dict, dict]:
 
     return cleaned, errors
 
-
 def validate_and_parse_assignment(post: dict, role_key: str, all_permissions) -> tuple[dict, dict]:
     """
     Validate POST data for a single role accordion submission.
 
-    Expected POST fields (for each permission pk P):
-        perm_{P}_create   checkbox  → can_create
-        perm_{P}_read     checkbox  → can_read
-        perm_{P}_edit     checkbox  → can_edit
-        perm_{P}_delete   checkbox  → can_delete
-        perm_{P}_limit    radio     → 'can_my' | 'can_all'
+    A row is VALID only when it has:
+        - the permission itself (iterated from all_permissions)
+        - at least one action checked  (can_create / can_read / can_edit / can_delete)
+        - a scope selected             (can_my | can_all)
 
-    Returns:
-        cleaned — {
-            role: str,
-            assignments: [
-                {
-                    permission_id: int,
-                    can_create: bool,
-                    can_read:   bool,
-                    can_edit:   bool,
-                    can_delete: bool,
-                    action_effect: 'can_my'|'can_all',
-                },
-                ...
-            ]
+    Rows that don't meet the passmark are categorised:
+        empty          — no action, no scope  → silently skipped
+        missing_limit  — has action(s) but no scope
+        missing_action — has scope but no actions
+
+    cleaned returns:
+        {
+            role:           str,
+            assignments:    [...],   # valid rows only
+            missing_limit:  [...],   # permission titles skipped (action, no scope)
+            missing_action: [...],   # permission titles skipped (scope, no action)
         }
-        errors — dict of field → message (usually empty for this form)
     """
-    errors:  dict = {}
-    assignments: list[dict] = []
+    errors:         dict       = {}
+    assignments:    list[dict] = []
+    missing_limit:  list[str]  = []   # has action, no scope
+    missing_action: list[str]  = []   # has scope,  no action
 
     valid_roles = {r[0] for r in ALL_ROLES}
     if role_key not in valid_roles:
@@ -196,34 +191,54 @@ def validate_and_parse_assignment(post: dict, role_key: str, all_permissions) ->
         return {}, errors
 
     for perm in all_permissions:
-        pid = perm.pk
+        pid    = perm.pk
         prefix = f'perm_{pid}_'
 
         can_create = post.get(f'{prefix}create') in ('on', '1', 'true')
         can_read   = post.get(f'{prefix}read')   in ('on', '1', 'true')
         can_edit   = post.get(f'{prefix}edit')   in ('on', '1', 'true')
         can_delete = post.get(f'{prefix}delete') in ('on', '1', 'true')
-        limit      = post.get(f'{prefix}limit', UserTypePermission.CAN_MY)
 
-        if limit not in (UserTypePermission.CAN_MY, UserTypePermission.CAN_ALL):
-            limit = UserTypePermission.CAN_MY
+        raw_limit = post.get(f'{prefix}limit') or None
+        if raw_limit is not None and raw_limit not in (
+            UserTypePermission.CAN_MY, UserTypePermission.CAN_ALL
+        ):
+            raw_limit = None   # reject garbage values
 
+        has_action = any([can_create, can_read, can_edit, can_delete])
+        has_limit  = raw_limit is not None
+
+        # ── completely untouched row — skip silently ──────────────────────────
+        if not has_action and not has_limit:
+            continue
+
+        # ── action ticked but no scope chosen ────────────────────────────────
+        if has_action and not has_limit:
+            missing_limit.append(perm.permission_title)
+            continue
+
+        # ── scope chosen but no action ticked ────────────────────────────────
+        if has_limit and not has_action:
+            missing_action.append(perm.permission_title)
+            continue
+
+        # ── valid row: permission + at least one action + scope ───────────────
         assignments.append({
             'permission_id': pid,
             'can_create':    can_create,
             'can_read':      can_read,
             'can_edit':      can_edit,
             'can_delete':    can_delete,
-            'action_effect': limit,
+            'action_effect': raw_limit,
         })
 
     cleaned = {
-        'role':        role_key,
-        'assignments': assignments,
+        'role':           role_key,
+        'assignments':    assignments,
+        'missing_limit':  missing_limit,
+        'missing_action': missing_action,
     }
     return cleaned, errors
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  LIST STATS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -322,7 +337,7 @@ def build_role_accordion_data(
             'can_read':      utp.can_read      if utp else False,
             'can_edit':      utp.can_edit      if utp else False,
             'can_delete':    utp.can_delete    if utp else False,
-            'action_effect': utp.action_effect if utp else UserTypePermission.CAN_MY,
+            'action_effect': utp.action_effect if utp else None,
             'is_pending':    (utp.pk in pending_ids) if utp else False,
         })
 

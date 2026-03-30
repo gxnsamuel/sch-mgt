@@ -291,10 +291,14 @@ def permission_update_role(request, pk):
     can_read      = request.POST.get('can_read')      in ('on', '1', 'true')
     can_edit      = request.POST.get('can_edit')      in ('on', '1', 'true')
     can_delete    = request.POST.get('can_delete')    in ('on', '1', 'true')
-    action_effect = request.POST.get('action_effect', UserTypePermission.CAN_MY)
 
-    if action_effect not in (UserTypePermission.CAN_MY, UserTypePermission.CAN_ALL):
-        action_effect = UserTypePermission.CAN_MY
+
+    action_effect = request.POST.get('action_effect') or None
+
+    if action_effect is not None and action_effect not in (
+        UserTypePermission.CAN_MY, UserTypePermission.CAN_ALL
+    ):
+        action_effect = None   # reject garbage; don't force CAN_MY
 
     with transaction.atomic():
         utp.can_create    = can_create
@@ -434,9 +438,36 @@ def assign_save_role(request):
     all_perms = Permission.objects.filter(is_active=True).order_by('permission_title')
     cleaned, errors = validate_and_parse_assignment(request.POST, role_key, all_perms)
 
+# AFTER ───────────────────────────────────────────────────────────────────
     if errors:
         for msg in errors.values():
             messages.error(request, msg)
+        return redirect('permissions:assign_edit_roles')
+
+    # ── notify about incomplete rows (skipped, not saved) ────────────────────
+    if cleaned.get('missing_limit'):
+        skipped = ', '.join(f'"{t}"' for t in cleaned['missing_limit'])
+        messages.warning(
+            request,
+            f'Skipped {len(cleaned["missing_limit"])} permission(s) — '
+            f'actions were ticked but no scope (My / All) was chosen: {skipped}.'
+        )
+
+    if cleaned.get('missing_action'):
+        skipped = ', '.join(f'"{t}"' for t in cleaned['missing_action'])
+        messages.warning(
+            request,
+            f'Skipped {len(cleaned["missing_action"])} permission(s) — '
+            f'a scope was chosen but no actions were ticked: {skipped}.'
+        )
+
+    # ── if nothing valid to save, still mark role as saved so flow can proceed ─
+    if not cleaned['assignments']:
+        mark_session_role_saved(request, role_key)
+        messages.info(
+            request,
+            f'"{get_role_label(role_key)}" saved with no permissions assigned.'
+        )
         return redirect('permissions:assign_edit_roles')
 
     new_pending_ids: list[int] = []

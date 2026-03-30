@@ -84,7 +84,9 @@ class UserTypePermission(models.Model):
     action_effect = models.CharField(
                         max_length=10,
                         choices=ACTION_EFFECT_CHOICES,
-                        default=CAN_MY,
+                        default=None,
+                        null=True,      # ← add
+                        blank=True,
                     )
 
     assigned_at   = models.DateTimeField(auto_now_add=True)
@@ -118,3 +120,16 @@ class UserTypePermission(models.Model):
             f"{self.permission.permission_title} "
             f"[{actions}] ({self.get_action_effect_display()})"
         )
+    
+
+
+
+
+
+
+
+
+
+
+
+
