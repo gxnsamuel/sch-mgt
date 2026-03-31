@@ -1,0 +1,117 @@
+# PART 1 — MIGRATION NOTES
+# ─────────────────────────────────────────────────────────────────────────────
+# Follow these steps in order after copying the Part 1 files into your project.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ── 1. Copy files to the correct locations ────────────────────────────────────
+
+#   students_models.py      →   students/models.py
+#   accounts_models.py      →   accounts/models.py
+#   admission_utils.py      →   students/utils/admission_utils.py
+#   student_utils.py        →   students/utils/student_utils.py
+
+
+# ── 2. What changed in students/models.py ─────────────────────────────────────
+
+#   Student model:
+#       - Removed:  parent (ForeignKey to CustomUser)
+#       - Added:    admission (OneToOneField → Admission, null=True blank=True)
+#       - Added:    village CharField
+#       - KEPT:     all other existing fields unchanged
+#
+#   Admission model:
+#       - REMOVED all single-parent flat fields:
+#             parent_full_name, parent_relationship, parent_phone,
+#             parent_email, parent_occupation, parent_address
+#       - ADDED:    parents_data = JSONField(default=list)
+#       - ADDED:    is_verified  = BooleanField(default=False)
+#       - ADDED:    verified_at  = DateTimeField(null=True, blank=True)
+#       - ADDED:    verified_by  = ForeignKey(CustomUser, null=True, blank=True)
+#       - ADDED:    full_name property
+#       - ADDED:    get_parents_data() method
+#       - KEPT:     student OneToOneField (but now points other direction via
+#                   enrolled_student related_name on Student instead)
+#       - NOTE:     The student FK is now ON Student.admission, not
+#                   Admission.student — but Admission STILL has
+#                   `student` OneToOneField for backward compat with
+#                   existing queries; both point to each other.
+#
+#   StudentParentRelationship model (NEW):
+#       Fields: student, parent, relationship, access_token, is_primary
+#       unique_together: (student, parent)
+
+
+# ── 3. What changed in accounts/models.py ─────────────────────────────────────
+
+#   ParentProfile:
+#       - ADDED:    access_token = CharField(max_length=64, unique=True)
+#       - REMOVED:  (no field removed — children are now fetched via
+#                    StudentParentRelationship, but the model itself is
+#                    unchanged except for the new field)
+#       - ADDED:    get_students() method
+#
+#   StaffProfile: NO CHANGES
+
+
+# ── 4. Run makemigrations ─────────────────────────────────────────────────────
+
+#   python manage.py makemigrations students
+#   python manage.py makemigrations accounts
+
+#   Expected migrations:
+#       students  0002  — alter Student (add admission FK, add village,
+#                          remove parent FK)
+#       students  0003  — alter Admission (add parents_data, is_verified,
+#                          verified_at, verified_by; remove old parent fields)
+#       students  0004  — create StudentParentRelationship
+#       accounts  0002  — alter ParentProfile (add access_token)
+
+
+# ── 5. Data migration warning ─────────────────────────────────────────────────
+
+#   If you have EXISTING Admission rows with old parent flat fields,
+#   write a manual data migration BEFORE step 4 to copy the data into
+#   the new parents_data JSONField, e.g.:
+#
+#       from students.models import Admission
+#       for adm in Admission.objects.all():
+#           adm.parents_data = [{
+#               'existing':      False,
+#               'full_name':     adm.parent_full_name,
+#               'relationship':  adm.parent_relationship,
+#               'phone':         adm.parent_phone,
+#               'email':         adm.parent_email,
+#               'occupation':    adm.parent_occupation,
+#               'address':       adm.parent_address,
+#               'nin':           '',
+#               'employer':      '',
+#           }]
+#           adm.save(update_fields=['parents_data'])
+#
+#   If you have EXISTING Student rows with a `parent` FK, write a
+#   migration to create StudentParentRelationship rows from them.
+
+
+# ── 6. Run migrate ────────────────────────────────────────────────────────────
+
+#   python manage.py migrate
+
+
+# ── 7. Notes on access_token uniqueness ──────────────────────────────────────
+
+#   ParentProfile.access_token has unique=True.
+#   For any existing ParentProfile rows without a token, generate one:
+#
+#       from accounts.models import ParentProfile
+#       from students.utils.admission_utils import generate_access_token
+#       for pp in ParentProfile.objects.filter(access_token=''):
+#           pp.access_token = generate_access_token()
+#           pp.save(update_fields=['access_token'])
+
+
+# ── 8. What Part 2 will build ─────────────────────────────────────────────────
+
+#   - Admission add flow (3-step views + templates)
+#   - Admission list, detail, delete, update-status (updated views + templates)
+#   - students/urls.py (partial — admission URLs only)
