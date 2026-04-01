@@ -357,7 +357,7 @@ class SchoolClass(TimeStampedModel):
     """
     key = models.CharField(max_length=10, unique=True)   # 'p1', 'baby' etc.
     name = models.CharField(max_length=50)               # 'Primary One'
-    level_type = models.CharField(max_length=20, choices=[
+    section = models.CharField(max_length=20, choices=[
         ('nursery', 'Nursery'),
         ('primary', 'Primary'),
     ])
@@ -371,13 +371,13 @@ class SchoolClass(TimeStampedModel):
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        if self.pk:
-            raise PermissionError("Class records are static and cannot be modified.")
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     if self.pk:
+    #         raise PermissionError("Class records are static and cannot be modified.")
+    #     super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
-        raise PermissionError("Class records are static and cannot be deleted.")
+    # def delete(self, *args, **kwargs):
+    #     raise PermissionError("Class records are static and cannot be deleted.")
 
 
 class SchoolStream(TimeStampedModel):

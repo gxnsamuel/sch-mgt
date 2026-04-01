@@ -2,11 +2,15 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Views:
 #   user_list               — all users with stats and filters
-#   register_parent         — create parent user + ParentProfile
 #   register_staff          — create teacher/staff/admin user + StaffProfile
 #   user_detail             — full profile page (dispatches by user_type)
-#   user_edit               — edit user + profile fields
 #   user_toggle_active      — POST: activate / deactivate account
+#
+# REMOVED:
+#   register_parent         — parents are now created only through the
+#                             student enrolment flow (direct create or
+#                             admission verify). Creating a parent without
+#                             linking them to a student is not supported.
 # ─────────────────────────────────────────────────────────────────────────────
 
 from django.contrib import messages
@@ -22,9 +26,7 @@ from accounts.models import ParentProfile, StaffProfile, USER_TYPE_CHOICES
 from accounts.utils import (
     generate_employee_id,
     generate_temp_key,
-    generate_parent_id,
     get_user_list_stats,
-    validate_and_parse_parent_registration,
     validate_and_parse_staff_registration,
     VALID_STAFF_ROLES,
     VALID_EMPLOYMENT_TYPES,
@@ -39,23 +41,15 @@ _T   = 'accounts/'
 
 def _staff_form_lookups() -> dict:
     return {
-        'all_classes':       SchoolClass.objects.filter(
-                                 is_active=True
-                             ).order_by('section', 'level', 'stream'),
-        'role_choices':      StaffProfile.ROLE_CHOICES,
-        'employment_choices':StaffProfile.EMPLOYMENT_TYPE_CHOICES,
+        'all_classes':           SchoolClass.objects.order_by('section'),
+        'role_choices':          StaffProfile.ROLE_CHOICES,
+        'employment_choices':    StaffProfile.EMPLOYMENT_TYPE_CHOICES,
         'qualification_choices': StaffProfile.QUALIFICATION_CHOICES,
         'user_type_choices': [
             ('teacher', 'Teacher'),
             ('staff',   'Support Staff'),
             ('admin',   'Administrator'),
         ],
-    }
-
-
-def _parent_form_lookups() -> dict:
-    return {
-        'relationship_choices': ParentProfile.RELATIONSHIP_CHOICES,
     }
 
 
@@ -77,17 +71,17 @@ def user_list(request):
     """
     qs = User.objects.prefetch_related('parent_profile', 'staff_profile')
 
-    search      = request.GET.get('q', '').strip()
-    type_filter = request.GET.get('type', '').strip()
+    search        = request.GET.get('q', '').strip()
+    type_filter   = request.GET.get('type', '').strip()
     active_filter = request.GET.get('active', '').strip()
 
     if search:
         qs = qs.filter(
-            Q(first_name__icontains=search)   |
-            Q(last_name__icontains=search)    |
-            Q(username__icontains=search)     |
-            Q(parent_id__icontains=search)    |
-            Q(email__icontains=search)        |
+            Q(first_name__icontains=search)  |
+            Q(last_name__icontains=search)   |
+            Q(username__icontains=search)    |
+            Q(parent_id__icontains=search)   |
+            Q(email__icontains=search)       |
             Q(phone__icontains=search)
         )
 
@@ -119,94 +113,7 @@ def user_list(request):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  2. REGISTER PARENT
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@login_required
-def register_parent(request):
-    """
-    Register a new parent / guardian account.
-
-    GET  — blank form showing all parent fields.
-           parent_id is auto-generated and displayed as read-only preview.
-    POST — validate; create CustomUser (user_type=parent, username=parent_id);
-           create ParentProfile; redirect to user_detail.
-
-    The parent receives their parent_id on paper / SMS — it is their
-    login credential at the login screen.
-    """
-    lookups = _parent_form_lookups()
-
-    if request.method == 'GET':
-        # Pre-generate a preview ID (not reserved until save)
-        try:
-            preview_id = generate_parent_id()
-        except Exception:
-            preview_id = 'PAR' + str(__import__('datetime').date.today().year) + 'XXXX'
-
-        return render(request, f'{_T}register_parent.html', {
-            'form_title':  'Register Parent / Guardian',
-            'preview_id':  preview_id,
-            'post':        {},
-            'errors':      {},
-            **lookups,
-        })
-
-    # ── POST ──────────────────────────────────────────────────────────────────
-    user_c, prof_c, errors = validate_and_parse_parent_registration(request.POST)
-
-    if errors:
-        for msg in errors.values():
-            messages.error(request, msg)
-        return render(request, f'{_T}register_parent.html', {
-            'form_title': 'Register Parent / Guardian',
-            'post':       request.POST,
-            'errors':     errors,
-            **lookups,
-        })
-
-    try:
-        with transaction.atomic():
-            # Generate unique parent_id inside the transaction
-            parent_id = generate_parent_id()
-
-            user = User.objects.create_parent_user(
-                parent_id  = parent_id,
-                password   = user_c.pop('password'),
-                first_name = user_c.get('first_name', ''),
-                last_name  = user_c.get('last_name', ''),
-                other_names= user_c.get('other_names', ''),
-                gender     = user_c.get('gender', ''),
-                email      = user_c.get('email', ''),
-                phone      = user_c.get('phone', ''),
-                alt_phone  = user_c.get('alt_phone', ''),
-                address    = user_c.get('address', ''),
-                nin        = user_c.get('nin', ''),
-            )
-
-            # ParentProfile
-            ParentProfile.objects.create(user=user, **prof_c)
-
-    except Exception as exc:
-        messages.error(request, f'Could not create parent account: {exc}')
-        return render(request, f'{_T}register_parent.html', {
-            'form_title': 'Register Parent / Guardian',
-            'post':       request.POST,
-            'errors':     {},
-            **lookups,
-        })
-
-    messages.success(
-        request,
-        f'Parent account created. '
-        f'Parent ID: {user.parent_id} — {user.full_name}. '
-        f'Please provide the parent with their ID and password.'
-    )
-    return redirect('accounts:user_detail', pk=user.pk)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  3. REGISTER STAFF / TEACHER / ADMIN
+#  2. REGISTER STAFF / TEACHER / ADMIN
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
@@ -214,11 +121,11 @@ def register_staff(request):
     """
     Register a new teacher, support staff, or admin account.
 
-    GET  — blank form. user_type selector drives which fields show.
+    GET  — blank form.
     POST — validate; create CustomUser + StaffProfile; redirect to user_detail.
 
-    Staff log in with username + password.
-    Employee ID is auto-generated (EMP<YEAR><SEQ>).
+    NOTE: Parent accounts are no longer created here. They are created
+    automatically when a student is enrolled (direct or via admission verify).
     """
     lookups = _staff_form_lookups()
 
@@ -230,7 +137,6 @@ def register_staff(request):
             **lookups,
         })
 
-    # ── POST ──────────────────────────────────────────────────────────────────
     user_c, prof_c, errors = validate_and_parse_staff_registration(request.POST)
 
     if errors:
@@ -246,7 +152,7 @@ def register_staff(request):
     try:
         with transaction.atomic():
             employee_id = generate_employee_id()
-            password = generate_temp_key()
+            password    = generate_temp_key()
 
             user = User.objects.create_user(
                 email       = user_c.get('email', ''),
@@ -259,20 +165,16 @@ def register_staff(request):
                 alt_phone   = user_c.get('alt_phone', ''),
                 address     = user_c.get('address', ''),
                 nin         = user_c.get('nin', ''),
-                # Staff are granted is_staff so they can access the admin
                 is_staff    = user_c['user_type'] in ('admin',),
-
                 password    = password,
                 username    = employee_id,
-                is_active   = False
+                is_active   = False,
             )
 
-            # Handle photo upload
             if request.FILES.get('profile_photo'):
                 user.profile_photo = request.FILES['profile_photo']
                 user.save(update_fields=['profile_photo'])
 
-            # StaffProfile
             class_managed_id = prof_c.pop('class_managed_id', None)
             sp = StaffProfile.objects.create(
                 user        = user,
@@ -283,7 +185,6 @@ def register_staff(request):
                 sp.class_managed_id = class_managed_id
                 sp.save(update_fields=['class_managed_id'])
 
-            # Handle signature upload
             if request.FILES.get('signature'):
                 sp.signature = request.FILES['signature']
                 sp.save(update_fields=['signature'])
@@ -307,7 +208,7 @@ def register_staff(request):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  4. USER DETAIL
+#  3. USER DETAIL
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
@@ -315,42 +216,54 @@ def user_detail(request, pk):
     """
     Full profile page for any user type.
     Shows user fields + the linked ParentProfile or StaffProfile.
+
+    For parents: children are fetched via StudentParentRelationship
+    (not the old direct Student.parent FK which no longer exists).
     """
     user = get_object_or_404(
         User.objects.prefetch_related(
-            'parent_profile', 'staff_profile', 'staff_profile__class_managed'
+            'parent_profile',
+            'staff_profile',
+            'staff_profile__class_managed',
         ),
-        pk=pk
+        pk=pk,
     )
 
     profile = None
+    children_with_rels = []   # list of (Student, StudentParentRelationship)
+
     if user.user_type == 'parent':
         profile = getattr(user, 'parent_profile', None)
+
+        if profile:
+            from students.models import StudentParentRelationship
+            rels = (
+                StudentParentRelationship.objects
+                .filter(parent=profile)
+                .select_related(
+                    'student',
+                    'student__current_class',
+                )
+                .order_by('student__last_name', 'student__first_name')
+            )
+            children_with_rels = [
+                (rel.student, rel) for rel in rels
+            ]
     else:
         profile = getattr(user, 'staff_profile', None)
 
-    # Children if parent
-    children = []
-    if user.user_type == 'parent' and profile:
-        from students.models import Student
-        children = list(
-            Student.objects.filter(parent=profile, is_active=True)
-            .select_related('current_class')
-            .order_by('last_name', 'first_name')
-        )
-
     context = {
-        'user_obj':    user,
-        'profile':     profile,
-        'children':    children,
-        'type_label':  dict(USER_TYPE_CHOICES).get(user.user_type, user.user_type),
-        'page_title':  user.full_name,
+        'user_obj':           user,
+        'profile':            profile,
+        'children_with_rels': children_with_rels,
+        'type_label':         dict(USER_TYPE_CHOICES).get(user.user_type, user.user_type),
+        'page_title':         user.full_name,
     }
     return render(request, f'{_T}user_detail.html', context)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  5. TOGGLE ACTIVE  (POST-only)
+#  4. TOGGLE ACTIVE  (POST-only)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
@@ -362,7 +275,6 @@ def user_toggle_active(request, pk):
 
     user = get_object_or_404(User, pk=pk)
 
-    # Prevent deactivating your own account
     if user.pk == request.user.pk:
         messages.error(request, 'You cannot deactivate your own account.')
         return redirect('accounts:user_detail', pk=user.pk)
@@ -371,7 +283,9 @@ def user_toggle_active(request, pk):
     user.save(update_fields=['is_active'])
 
     state = 'activated' if user.is_active else 'deactivated'
-    messages.success(request, f'Account for "{user.full_name}" has been {state}.')
+    messages.success(
+        request, f'Account for "{user.full_name}" has been {state}.'
+    )
 
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
     if next_url:

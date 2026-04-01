@@ -132,12 +132,12 @@
               <option value="">— Not specified —</option>
               <optgroup label="Nursery">
                 {% for cls in all_classes %}{% if cls.section == 'nursery' %}
-                <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.display_name }}</option>
+                <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
                 {% endif %}{% endfor %}
               </optgroup>
               <optgroup label="Primary">
                 {% for cls in all_classes %}{% if cls.section == 'primary' %}
-                <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.display_name }}</option>
+                <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
                 {% endif %}{% endfor %}
               </optgroup>
             </select>

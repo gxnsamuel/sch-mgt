@@ -13,7 +13,7 @@
 <li class="breadcrumb-item active">Add Term</li>
 {% endif %}
 {% endblock %}
-
+ 
 {% block content %}
 
 <div class="d-flex align-items-center justify-content-between mb-4">
@@ -220,7 +220,7 @@
                         {% if cls.pk in selected_class_ids %}checked{% endif %}
                       {% endif %}
                     />
-                    <label class="form-check-label small fw-600" for="cls_{{ cls.pk }}">{{ cls.display_name }}</label>
+                    <label class="form-check-label small fw-600" for="cls_{{ cls.pk }}">{{ cls.name }}</label>
                   </div>
                 </div>
                 {% endfor %}

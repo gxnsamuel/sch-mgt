@@ -14,7 +14,7 @@ from django.urls import path
 
 from accounts.views import (
     user_list,
-    register_parent,
+    # register_parent,
     register_staff,
     user_detail,
     user_toggle_active,
@@ -35,6 +35,6 @@ urlpatterns = [
     # ── Registration ──────────────────────────────────────────────────────────
     #   /accounts/register/parent/   → register parent (user_type=parent)
     #   /accounts/register/staff/    → register teacher/staff/admin
-    path('register/parent/', register_parent, name='register_parent'),
+    # path('register/parent/', register_parent, name='register_parent'),
     path('register/staff/',  register_staff,  name='register_staff'),
 ]

@@ -617,7 +617,7 @@ def get_assessments_stats(term: Term) -> dict:
 
 def get_all_classes() -> list:
     """Return all active SchoolClass objects for select dropdowns."""
-    return SchoolClass.objects.filter(is_active=True).order_by('section', 'level', 'stream')
+    return SchoolClass.objects.order_by('section')
 
 
 def get_terms_list_stats() -> dict:

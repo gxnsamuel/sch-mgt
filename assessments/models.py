@@ -70,16 +70,16 @@ class Assessment(TimeStampedModel):
                             help_text='Instructions or notes about this assessment')
 
     # Paper / task file
-    paper_file        = models.FileField(
-                            upload_to='assessments/papers/',
-                            blank=True, null=True,
-                            help_text='Upload the exam paper or task sheet (PDF, DOCX, image)'
-                        )
-    marking_scheme    = models.FileField(
-                            upload_to='assessments/schemes/',
-                            blank=True, null=True,
-                            help_text='Upload the marking guide / answer sheet (optional)'
-                        )
+    # paper_file        = models.FileField(
+    #                         upload_to='assessments/papers/',
+    #                         blank=True, null=True,
+    #                         help_text='Upload the exam paper or task sheet (PDF, DOCX, image)'
+    #                     )
+    # marking_scheme    = models.FileField(
+    #                         upload_to='assessments/schemes/',
+    #                         blank=True, null=True,
+    #                         help_text='Upload the marking guide / answer sheet (optional)'
+    #                     )
 
     # Academic period
     term              = models.ForeignKey(
@@ -87,7 +87,7 @@ class Assessment(TimeStampedModel):
                             on_delete=models.CASCADE,
                             related_name='assessments'
                         )
-    academic_year     = models.CharField(max_length=9, help_text='Format: 2025/2026')
+    # academic_year     = models.CharField(max_length=9, help_text='Format: 2025/2026')
     month             = models.IntegerField(choices=MONTH_CHOICES,
                             help_text='Month this assessment was given')
     date_given        = models.DateField(help_text='Date the assessment was administered')
@@ -97,10 +97,10 @@ class Assessment(TimeStampedModel):
                             help_text='Date results were / will be released')
 
     # Marks configuration
-    total_marks       = models.DecimalField(max_digits=7, decimal_places=1, default=100,
-                            help_text='Default max marks (used per subject unless overridden)')
-    duration_minutes  = models.PositiveIntegerField(null=True, blank=True,
-                            help_text='Time allowed in minutes')
+    # total_marks       = models.DecimalField(max_digits=7, decimal_places=1, default=100,
+    #                         help_text='Default max marks (used per subject unless overridden)')
+    # duration_minutes  = models.PositiveIntegerField(null=True, blank=True,
+    #                         help_text='Time allowed in minutes')
 
     # Status and visibility
     is_published      = models.BooleanField(default=False,

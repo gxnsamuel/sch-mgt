@@ -1,7 +1,4 @@
-# students/urls.py
-# ─────────────────────────────────────────────────────────────────────────────
-# URL patterns for the students app.
-# Namespace: 'students'
+# students/urls.py  (complete — replaces the Part 2/3 version)
 # ─────────────────────────────────────────────────────────────────────────────
 
 from django.urls import path
@@ -20,10 +17,43 @@ from students.views.admission_views import (
     admission_verify_step3,
     admission_verify_step4,
 )
+from students.views.student_views import (
+    student_create_step1,
+    student_create_step2,
+    student_create_step3,
+    student_detail,
+    student_list,
+    student_toggle_active,
+)
 
-app_name = 'students' 
+app_name = 'students'
 
 urlpatterns = [
+
+    # ── Student list + direct create ──────────────────────────────────────────
+    path('',
+         student_list,
+         name='student_list'),
+
+    path('enrol/',
+         student_create_step1,
+         name='student_create_step1'),
+
+    path('enrol/parents/',
+         student_create_step2,
+         name='student_create_step2'),
+
+    path('enrol/confirm/',
+         student_create_step3,
+         name='student_create_step3'),
+
+    path('<int:pk>/',
+         student_detail,
+         name='student_detail'),
+
+    path('<int:pk>/toggle-active/',
+         student_toggle_active,
+         name='student_toggle_active'),
 
     # ── Admissions list ───────────────────────────────────────────────────────
     path('admissions/',

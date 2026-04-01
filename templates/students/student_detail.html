@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:student_list' %}" class="text-secondary">Students</a></li>
+<li class="breadcrumb-item active">{{ student.student_id }}</li>
+{% endblock %}
+
+{% block content %}
+
+{# ── One-time access token banner (shown immediately after creation) ── #}
+{% if new_token %}
+<div class="alert alert-warning border-warning border-2 d-flex gap-3 align-items-start mb-4">
+  <i class="bi bi-key-fill text-warning fs-3 flex-shrink-0"></i>
+  <div>
+    <div class="fw-700 mb-1">Portal Access Token — Note this down now</div>
+    <div class="bg-dark text-success font-monospace rounded px-3 py-2 d-inline-block mb-2"
+         style="font-size:1.2rem;letter-spacing:.08em;">{{ new_token }}</div>
+    <div class="small text-muted">
+      This is the shared login password for all parents of <strong>{{ student.full_name }}</strong>.
+      Each parent uses their own <strong>Parent ID</strong> as the username.
+      This token is only shown once in plain text.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Page header ── #}
+<div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
+  <div class="d-flex align-items-center gap-3">
+    {% if student.profile_photo %}
+    <img src="{{ student.profile_photo.url }}" alt="{{ student.full_name }}"
+         class="rounded-circle border" style="width:60px;height:60px;object-fit:cover;"/>
+    {% else %}
+    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+         style="width:60px;height:60px;font-size:1.2rem;">
+      {{ student.first_name|first|upper }}{{ student.last_name|first|upper }}
+    </div>
+    {% endif %}
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+        <h4 class="fw-800 mb-0">{{ student.full_name }}</h4>
+        <code class="fw-700 text-muted">{{ student.student_id }}</code>
+        {% if student.is_active %}
+        <span class="badge bg-success rounded-pill">Active</span>
+        {% else %}
+        <span class="badge bg-secondary rounded-pill">Inactive</span>
+        {% endif %}
+        {% if student.is_special_needs %}
+        <span class="badge bg-warning text-dark">SEN</span>
+        {% endif %}
+      </div>
+      <div class="text-muted small d-flex gap-3 flex-wrap">
+        <span><i class="bi bi-building me-1"></i>{{ student.current_class.display_name|default:"No class" }}</span>
+        <span><i class="bi bi-calendar3 me-1"></i>{{ student.academic_year }}</span>
+        {% if age %}<span><i class="bi bi-cake me-1"></i>Age {{ age }}</span>{% endif %}
+        <span><i class="bi bi-calendar-check me-1"></i>Enrolled {{ student.date_enrolled|date:"d M Y" }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <form method="post" action="{% url 'students:student_toggle_active' student.pk %}">
+      {% csrf_token %}
+      <button type="submit"
+        class="btn btn-sm {% if student.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+        <i class="bi {% if student.is_active %}bi-toggle-on{% else %}bi-toggle-off{% endif %} me-1"></i>
+        {% if student.is_active %}Deactivate{% else %}Activate{% endif %}
+      </button>
+    </form>
+    {% if admission %}
+    <a href="{% url 'students:admission_detail' admission.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-clipboard me-1"></i>Admission Record
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════
+   CURRENT TERM BALANCE — HERO DARK BANNER
+══════════════════════════════════════════════════════ #}
+{% if current_term %}
+<div class="card border-0 bg-dark text-white mb-4">
+  <div class="card-body py-3">
+    <div class="row g-0 text-center">
+      <div class="col-3 border-end border-secondary">
+        <div class="small text-white-50 mb-1" style="font-size:.68rem;text-transform:uppercase;">Term</div>
+        <div class="fw-800">Term {{ current_term.name }}</div>
+        <div class="text-white-50 small">{{ current_term.academic_year }}</div>
+      </div>
+      <div class="col-3 border-end border-secondary">
+        <div class="small text-white-50 mb-1" style="font-size:.68rem;text-transform:uppercase;">Required</div>
+        <div class="fw-800 font-monospace">{{ current_term_required|floatformat:0 }}</div>
+      </div>
+      <div class="col-3 border-end border-secondary">
+        <div class="small text-white-50 mb-1" style="font-size:.68rem;text-transform:uppercase;">Paid</div>
+        <div class="fw-800 font-monospace text-success">{{ current_term_paid|floatformat:0 }}</div>
+      </div>
+      <div class="col-3">
+        <div class="small text-white-50 mb-1" style="font-size:.68rem;text-transform:uppercase;">Balance</div>
+        <div class="fw-800 font-monospace {% if is_cleared_this_term %}text-success{% else %}text-danger{% endif %}">
+          {% if is_cleared_this_term %}<i class="bi bi-check-circle me-1"></i>Cleared{% else %}{{ current_term_balance|floatformat:0 }}{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  {# ════════════ LEFT: profile + parents ════════════ #}
+  <div class="col-12 col-lg-4">
+
+    {# Personal details #}
+    <div class="card mb-4">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-person me-2 text-primary"></i>Profile</h6></div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">DOB</dt>
+          <dd class="col-7">{{ student.date_of_birth|date:"d M Y"|default:"—" }}</dd>
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Gender</dt>
+          <dd class="col-7">{{ student.get_gender_display }}</dd>
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Nationality</dt>
+          <dd class="col-7">{{ student.nationality }}</dd>
+          {% if student.district_of_origin %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">District</dt>
+          <dd class="col-7">{{ student.district_of_origin }}</dd>
+          {% endif %}
+          {% if student.religion %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Religion</dt>
+          <dd class="col-7">{{ student.religion }}</dd>
+          {% endif %}
+          {% if student.blood_group %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Blood Group</dt>
+          <dd class="col-7"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ student.blood_group }}</span></dd>
+          {% endif %}
+          {% if student.birth_certificate_no %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Birth Cert.</dt>
+          <dd class="col-7 font-monospace">{{ student.birth_certificate_no }}</dd>
+          {% endif %}
+          {% if student.medical_notes %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Medical</dt>
+          <dd class="col-7 text-muted">{{ student.medical_notes }}</dd>
+          {% endif %}
+          {% if student.previous_school %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Prev. School</dt>
+          <dd class="col-7">{{ student.previous_school }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    {# Parents / Relationships #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-people me-2 text-success"></i>Parents / Guardians</h6>
+      </div>
+      {% if relationships %}
+      <div class="list-group list-group-flush">
+        {% for rel in relationships %}
+        <div class="list-group-item py-3">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center fw-700 flex-shrink-0"
+                 style="width:36px;height:36px;font-size:.8rem;">
+              {{ rel.parent.full_name|first|upper }}
+            </div>
+            <div class="flex-fill">
+              <div class="fw-700 small">{{ rel.parent.full_name }}</div>
+              <div class="d-flex gap-1 flex-wrap">
+                <span class="badge bg-secondary-subtle text-secondary border" style="font-size:.65rem;">{{ rel.get_relationship_display }}</span>
+                {% if rel.is_primary %}<span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.65rem;">Primary</span>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="small text-muted ms-1 mt-1">
+            <code>{{ rel.parent.parent_id }}</code>
+            {% if rel.parent.phone %} &bull; {{ rel.parent.phone }}{% endif %}
+          </div>
+          <div class="mt-1">
+            <a href="{% url 'accounts:user_detail' rel.parent.user.pk %}" class="btn btn-xs btn-outline-secondary py-0 px-2 small">
+              <i class="bi bi-person-gear me-1"></i>Account
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-body text-center text-muted py-4 small">
+        <i class="bi bi-people fs-2 d-block mb-1 opacity-25"></i>
+        No parents linked.
+      </div>
+      {% endif %}
+    </div>
+
+    {# Secondary guardian #}
+    {% if student.secondary_guardian_name %}
+    <div class="card mb-4">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-person-check me-2 text-warning"></i>Emergency Contact</h6></div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700">Name</dt><dd class="col-7 fw-700">{{ student.secondary_guardian_name }}</dd>
+          {% if student.secondary_guardian_phone %}<dt class="col-5 text-muted fw-700">Phone</dt><dd class="col-7">{{ student.secondary_guardian_phone }}</dd>{% endif %}
+          {% if student.secondary_guardian_relationship %}<dt class="col-5 text-muted fw-700">Relationship</dt><dd class="col-7">{{ student.secondary_guardian_relationship }}</dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ════════════ RIGHT: fees + assessments ════════════ #}
+  <div class="col-12 col-lg-8">
+
+    {# ── Lifetime fee totals ── #}
+    <div class="row g-3 mb-4">
+      <div class="col-4"><div class="stat-card"><div class="stat-value text-dark font-monospace" style="font-size:1.3rem;">{{ total_required_ever|floatformat:0 }}</div><div class="stat-label">Total Required (All Time)</div></div></div>
+      <div class="col-4"><div class="stat-card"><div class="stat-value text-success font-monospace" style="font-size:1.3rem;">{{ total_paid_ever|floatformat:0 }}</div><div class="stat-label">Total Paid (All Time)</div></div></div>
+      <div class="col-4"><div class="stat-card"><div class="stat-value {% if total_balance_ever == 0 %}text-success{% else %}text-danger{% endif %} font-monospace" style="font-size:1.3rem;">{{ total_balance_ever|floatformat:0 }}</div><div class="stat-label">Outstanding (All Time)</div></div></div>
+    </div>
+
+    {# ── Current term fee structure ── #}
+    {% if current_fee_structure %}
+    <div class="card mb-4">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-receipt me-2 text-primary"></i>Current Term Fee Structure</h6></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Fee Type</th><th class="text-end">Amount (UGX)</th><th>Compulsory</th></tr>
+          </thead>
+          <tbody>
+            {% for fee in current_fee_structure %}
+            <tr>
+              <td class="fw-700">{{ fee.get_fees_type_display }}</td>
+              <td class="text-end font-monospace fw-700">{{ fee.amount|floatformat:0 }}</td>
+              <td>{% if fee.is_compulsory %}<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span>{% else %}<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── All assessment fee statements ── #}
+    {% if all_assessment_fees %}
+    <div class="card mb-4">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-journal-text me-2 text-info"></i>Fee Statements by Term</h6></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Term</th><th class="text-end">Required</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th class="text-center">Cleared</th></tr>
+          </thead>
+          <tbody>
+            {% for af in all_assessment_fees %}
+            <tr {% if af.term == current_term %}class="table-primary"{% endif %}>
+              <td class="fw-700">Term {{ af.term.name }} <span class="text-muted fw-400">({{ af.term.academic_year }})</span></td>
+              <td class="text-end font-monospace">{{ af.total_required|floatformat:0 }}</td>
+              <td class="text-end font-monospace text-success">{{ af.total_paid|floatformat:0 }}</td>
+              <td class="text-end font-monospace fw-700 {% if af.balance == 0 %}text-success{% else %}text-danger{% endif %}">{{ af.balance|floatformat:0 }}</td>
+              <td class="text-center">{% if af.is_cleared %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Recent payments ── #}
+    {% if recent_payments %}
+    <div class="card mb-4">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-clock-history me-2 text-success"></i>Recent Payments</h6></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Date</th><th>Fee Type</th><th>Term</th><th class="text-end">Amount (UGX)</th></tr>
+          </thead>
+          <tbody>
+            {% for p in recent_payments %}
+            <tr>
+              <td class="text-muted text-nowrap">{{ p.payment_date|date:"d M Y" }}</td>
+              <td>{{ p.school_fees.get_fees_type_display|default:"—" }}</td>
+              <td class="text-muted">Term {{ p.term.name }}</td>
+              <td class="text-end font-monospace fw-700 text-success">{{ p.amount_paid|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Academic performance by term ── #}
+    {% if assessment_terms %}
+    {% for term in assessment_terms %}
+    {% with perfs=performance_by_term|get_item:term %}
+    <div class="card mb-4">
+      <div class="card-header py-3 d-flex align-items-center justify-content-between">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-bar-chart me-2 text-warning"></i>
+          Academic Results — Term {{ term.name }} ({{ term.academic_year }})
+        </h6>
+        <span class="badge bg-secondary-subtle text-secondary border">{{ perfs|length }} subject{{ perfs|length|pluralize }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Subject</th>
+              <th class="text-center">Marks</th>
+              <th class="text-center">Out of</th>
+              <th class="text-center">%</th>
+              <th class="text-center">Grade</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for perf in perfs %}
+            <tr>
+              <td class="fw-700">{{ perf.subject.name }}</td>
+              <td class="text-center fw-700 font-monospace">
+                {% if perf.is_absent %}<span class="badge bg-secondary">ABS</span>
+                {% else %}{{ perf.total_marks|floatformat:0 }}{% endif %}
+              </td>
+              <td class="text-center text-muted">{{ perf.assessment.max_marks|floatformat:0|default:"—" }}</td>
+              <td class="text-center">
+                {% if not perf.is_absent and perf.assessment.max_marks %}
+                {% widthratio perf.total_marks perf.assessment.max_marks 100 as pct %}
+                <span class="fw-700 {% if pct >= 80 %}text-success{% elif pct >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                  {{ pct }}%
+                </span>
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-center">
+                {% if perf.grade %}<span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ perf.grade }}</span>{% else %}—{% endif %}
+              </td>
+              <td class="text-muted">{{ perf.remarks|default:"" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+    {% else %}
+    <div class="card">
+      <div class="card-body text-center text-muted py-4">
+        <i class="bi bi-bar-chart fs-2 d-block mb-1 opacity-25"></i>
+        <div class="small">No assessment results recorded yet.</div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+{% endblock %}

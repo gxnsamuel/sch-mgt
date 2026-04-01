@@ -119,15 +119,15 @@ def add_assessment(request):
                 assessment_type       = cleaned['assessment_type'],
                 description           = cleaned.get('description', ''),
                 term                  = cleaned['term'],
-                academic_year         = cleaned['academic_year'],
+                # academic_year         = cleaned['academic_year'],
                 month                 = cleaned['month'],
                 date_given            = cleaned['date_given'],
                 date_due              = cleaned.get('date_due'),
                 date_results_released = cleaned.get('date_results_released'),
-                total_marks           = cleaned['total_marks'],
-                duration_minutes      = cleaned.get('duration_minutes'),
-                is_published          = cleaned['is_published'],
-                results_published     = cleaned['results_published'],
+                # total_marks           = cleaned['total_marks'],
+                # duration_minutes      = cleaned.get('duration_minutes'),
+                # is_published          = cleaned['is_published'],
+                # results_published     = cleaned['results_published'],
                 notes                 = cleaned.get('notes', ''),
                 created_by            = request.user,
                 **{k: cleaned[k] for k in ('paper_file', 'marking_scheme') if k in cleaned},
@@ -159,9 +159,8 @@ def edit_assessment(request, pk):
             return render(request, 'assessments/edit_assessment.html', ctx)
 
         update_fields = [
-            'title', 'assessment_type', 'description', 'term', 'academic_year',
+            'title', 'assessment_type', 'description', 'term',
             'month', 'date_given', 'date_due', 'date_results_released',
-            'total_marks', 'duration_minutes', 'is_published',
             'results_published', 'notes',
         ]
         with transaction.atomic():
