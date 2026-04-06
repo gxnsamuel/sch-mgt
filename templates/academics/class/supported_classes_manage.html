@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between mb-3">
+
+        <h4>
+
+            Supported Classes
+
+        </h4>
+
+        <div>
+
+            <button
+                class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addModal">
+
+                <i class="bi bi-plus-circle"></i>
+                Add Classes
+
+            </button>
+
+            <button
+                class="btn btn-warning"
+                data-bs-toggle="modal"
+                data-bs-target="#editModal">
+
+                <i class="bi bi-pencil-square"></i>
+                Edit Classes
+
+            </button>
+
+        </div>
+
+    </div>
+
+
+
+
+
+<div class="card shadow-sm">
+
+    <div class="card-body">
+
+        <table class="table table-bordered">
+
+            <thead class="table-light">
+
+                <tr>
+
+                    <th>#</th>
+                    <th>Class</th>
+                    <th>Section</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for s in supported_classes %}
+
+                <tr>
+
+                    <td>
+
+                        {{ forloop.counter }}
+
+                    </td>
+
+                    <td>
+
+                        {{ s.supported_class.name }}
+
+                    </td>
+
+                    <td>
+
+                        {{ s.supported_class.section|title }}
+
+                    </td>
+
+                </tr>
+
+                {% empty %}
+
+                <tr>
+
+                    <td colspan="3"
+                        class="text-center">
+
+                        No supported classes yet
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+
+
+
+<div
+    class="modal fade"
+    id="addModal">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <form method="POST">
+
+                {% csrf_token %}
+
+                <input
+                    type="hidden"
+                    name="action"
+                    value="create">
+
+                <div class="modal-header">
+
+                    <h5>
+
+                        Add Supported Classes
+
+                    </h5>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="row">
+
+                        {% for c in classes %}
+
+                        <div class="col-md-4">
+
+                            <div class="form-check mb-2">
+
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    name="class_{{ c.key }}"
+                                    value="{{ c.key }}">
+
+                                <label class="form-check-label">
+
+                                    {{ c.name }}
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        class="btn btn-primary">
+
+                        Save
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+<div
+    class="modal fade"
+    id="editModal">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <form method="POST">
+
+                {% csrf_token %}
+
+                <input
+                    type="hidden"
+                    name="action"
+                    value="update">
+
+                <div class="modal-header">
+
+                    <h5>
+
+                        Edit Supported Classes
+
+                    </h5>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="row">
+
+                        {% for c in classes %}
+
+                        <div class="col-md-4">
+
+                            <div class="form-check mb-2">
+
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    name="class_{{ c.key }}"
+                                    value="{{ c.key }}"
+
+                                    {% if c.id in supported_class_ids %}
+                                    checked
+                                    {% endif %}
+                                >
+
+                                <label class="form-check-label">
+
+                                    {{ c.name }}
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        class="btn btn-success">
+
+                        Update
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+

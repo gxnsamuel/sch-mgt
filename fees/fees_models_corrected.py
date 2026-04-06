@@ -437,17 +437,17 @@ class StudentClassPromotion(TimeStampedModel):
     student                  = models.ForeignKey(
                                    'students.Student',
                                    on_delete=models.CASCADE,
-                                   related_name='class_promotions'
+                                   related_name='student_class_promotion'
                                )
     from_class               = models.ForeignKey(
                                    SchoolSupportedClasses,
                                    on_delete=models.CASCADE,
-                                   related_name='promotions_from_students'
+                                   related_name='student_class_promotion_from'
                                )
     to_class                 = models.ForeignKey(
                                    SchoolSupportedClasses,
                                    on_delete=models.CASCADE,
-                                   related_name='promotions_to_students'
+                                   related_name='student_class_promotion_to'
                                )
     from_year                = models.CharField(
                                    max_length=4,

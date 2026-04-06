@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width:860px;">
+
+  <h4 class="mb-1 fw-semibold">Enter Payment Amounts</h4>
+  <p class="text-muted small mb-3">
+    Step 3 of 4 — Enter the amount or items for each selected fee for
+    <strong>{{ step1.student_name }}</strong>
+    <span class="text-muted">({{ step1.student_id }} — {{ step1.student_class }})</span>.
+  </p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% for detail in fee_details %}
+
+      {# ════════════════════════════════════════════════════════════ #}
+      {# SCHOOL / ASSESSMENT — Cash amount input                     #}
+      {# ════════════════════════════════════════════════════════════ #}
+      {% if detail.type == 'school' or detail.type == 'assessment' %}
+
+      {% with field_key="amount_"|add:detail.type|add:"_"|add:detail.fee_id|stringformat:"s" %}
+      <div class="card shadow-sm mb-3 {% if errors|get_item:field_key %}border-danger{% endif %}">
+        <div class="card-header d-flex align-items-center py-2">
+          {% if detail.type == 'school' %}
+            <i class="bi bi-cash-coin text-primary me-2"></i>
+          {% else %}
+            <i class="bi bi-clipboard-check text-success me-2"></i>
+          {% endif %}
+          <span class="fw-semibold">{{ detail.label }}</span>
+          <span class="badge bg-light text-muted ms-2 border small">{{ detail.term_label }}</span>
+        </div>
+        <div class="card-body">
+          <div class="row align-items-center g-3">
+
+            <div class="col-md-4">
+              <div class="small text-muted">Total Fee</div>
+              <div class="fw-semibold">UGX {{ detail.amount_required|floatformat:0|intcomma }}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="small text-muted">Already Paid</div>
+              <div class="fw-semibold text-success">UGX {{ detail.amount_paid|floatformat:0|intcomma }}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="small text-muted">Balance Remaining</div>
+              <div class="fw-semibold text-danger">UGX {{ detail.amount_balance|floatformat:0|intcomma }}</div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="{{ field_key }}">
+                Amount Paying Now (UGX)
+                <span class="text-danger">*</span>
+              </label>
+              <div class="input-group" style="max-width:320px;">
+                <span class="input-group-text">UGX</span>
+                <input
+                  type="number"
+                  id="{{ field_key }}"
+                  name="{{ field_key }}"
+                  class="form-control {% if errors|get_item:field_key %}is-invalid{% endif %}"
+                  placeholder="Enter amount..."
+                  min="1"
+                  max="{{ detail.amount_balance }}"
+                  step="1"
+                  value="{{ post|get_item:field_key }}"
+                >
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        onclick="setFull('{{ field_key }}', {{ detail.amount_balance }})">
+                  Full Balance
+                </button>
+                {% if errors|get_item:field_key %}
+                  <div class="invalid-feedback">{{ errors|get_item:field_key }}</div>
+                {% endif %}
+              </div>
+              <div class="form-text">
+                Maximum you can enter: UGX {{ detail.amount_balance|floatformat:0|intcomma }}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      {% endwith %}
+
+      {# ════════════════════════════════════════════════════════════ #}
+      {# SCHOLASTIC — Physical units + cash hybrid input             #}
+      {# ════════════════════════════════════════════════════════════ #}
+      {% elif detail.type == 'scholastic' %}
+
+      {% with field_key="scholastic_"|add:detail.fee_id|stringformat:"s" %}
+      <div class="card shadow-sm mb-3 {% if errors|get_item:field_key %}border-danger{% endif %}">
+        <div class="card-header d-flex align-items-center py-2">
+          <i class="bi bi-box-seam text-warning me-2"></i>
+          <span class="fw-semibold">{{ detail.label }}</span>
+          <span class="badge bg-light text-muted ms-2 border small">{{ detail.term_label }}</span>
+        </div>
+        <div class="card-body">
+
+          {# Status row #}
+          <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3">
+              <div class="small text-muted">Required</div>
+              <div class="fw-semibold">{{ detail.quantity_required }} {{ detail.unit }}</div>
+              <div class="text-muted" style="font-size:.75rem;">
+                UGX {{ detail.monetary_value|floatformat:0|intcomma }} total
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="small text-muted">Already Brought</div>
+              <div class="fw-semibold">{{ detail.quantity_brought_already }} {{ detail.unit }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="small text-muted">Still Needed</div>
+              <div class="fw-semibold text-{% if detail.quantity_remaining > 0 %}warning{% else %}success{% endif %}">
+                {{ detail.quantity_remaining }} {{ detail.unit }}
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="small text-muted">Cash Balance</div>
+              <div class="fw-semibold text-danger">
+                UGX {{ detail.amount_balance|floatformat:0|intcomma }}
+              </div>
+            </div>
+          </div>
+
+          {% if errors|get_item:field_key %}
+          <div class="alert alert-danger py-2 small mb-3">
+            {{ errors|get_item:field_key }}
+          </div>
+          {% endif %}
+
+          <div class="row g-3 align-items-end">
+
+            {# ── Physical side ─────────────────────────────────── #}
+            {% if detail.quantity_remaining > 0 %}
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">
+                Units Bringing Now
+              </label>
+
+              {# "Fully brought" shortcut checkbox #}
+              <div class="form-check mb-2">
+                <input type="checkbox"
+                       class="form-check-input"
+                       id="fully_phys_{{ detail.fee_id }}"
+                       onchange="toggleFullyPhysical(this, {{ detail.fee_id }}, {{ detail.quantity_remaining }})">
+                <label class="form-check-label small"
+                       for="fully_phys_{{ detail.fee_id }}">
+                  Bringing all {{ detail.quantity_remaining }} remaining {{ detail.unit }}
+                </label>
+              </div>
+
+              <div class="input-group">
+                <input
+                  type="number"
+                  id="qty_{{ detail.fee_id }}"
+                  name="qty_{{ detail.fee_id }}"
+                  class="form-control"
+                  placeholder="0"
+                  min="0"
+                  max="{{ detail.quantity_remaining }}"
+                  step="1"
+                  value="{{ post|get_item:'qty_'|add:detail.fee_id|stringformat:'s'|default:'0' }}"
+                >
+                <span class="input-group-text">{{ detail.unit }}</span>
+              </div>
+              <div class="form-text">
+                Max {{ detail.quantity_remaining }} {{ detail.unit }}
+                ({{ detail.unit_price|floatformat:0|intcomma }} UGX each)
+              </div>
+            </div>
+            {% endif %}
+
+            {# ── Cash side ─────────────────────────────────────── #}
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">
+                Cash Payment (UGX)
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">UGX</span>
+                <input
+                  type="number"
+                  id="cash_{{ detail.fee_id }}"
+                  name="cash_{{ detail.fee_id }}"
+                  class="form-control"
+                  placeholder="0"
+                  min="0"
+                  max="{{ detail.amount_balance }}"
+                  step="1"
+                  value="{{ post|get_item:'cash_'|add:detail.fee_id|stringformat:'s'|default:'0' }}"
+                  {% if detail.quantity_remaining == 0 %}autofocus{% endif %}
+                >
+              </div>
+              <div class="form-text">
+                Max UGX {{ detail.amount_balance|floatformat:0|intcomma }}
+              </div>
+            </div>
+
+            {# ── Live combined balance ──────────────────────────── #}
+            <div class="col-md-2">
+              <label class="form-label fw-semibold text-muted small">Remaining After</label>
+              <div id="remaining_{{ detail.fee_id }}"
+                   class="fw-bold text-danger"
+                   style="font-size:1.1rem;">
+                UGX {{ detail.amount_balance|floatformat:0|intcomma }}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+      {% endwith %}
+      {% endif %}
+
+    {% endfor %}
+
+    {# ── Actions ──────────────────────────────────────────────────────────── #}
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <div class="d-flex gap-2">
+        <button type="submit" name="action" value="cancel"
+                class="btn btn-outline-danger">
+          <i class="bi bi-x-circle me-1"></i> Cancel
+        </button>
+        <button type="submit" name="action" value="back"
+                class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i> Back
+        </button>
+      </div>
+      <button type="submit" class="btn btn-primary px-4">
+        Review &amp; Confirm <i class="bi bi-arrow-right ms-1"></i>
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // "Full balance" button for monetary fees
+  function setFull(fieldId, balance) {
+    const input = document.getElementById(fieldId);
+    if (input) input.value = Math.floor(balance);
+  }
+
+  // "Fully physical" checkbox for scholastic items
+  function toggleFullyPhysical(cb, feeId, maxQty) {
+    const qtyInput = document.getElementById(`qty_${feeId}`);
+    if (!qtyInput) return;
+    if (cb.checked) {
+      qtyInput.value    = maxQty;
+      qtyInput.disabled = true;
+    } else {
+      qtyInput.value    = 0;
+      qtyInput.disabled = false;
+    }
+    updateScholasticBalance(feeId);
+  }
+
+  // Live balance recalculator for scholastic items
+  document.querySelectorAll('[id^="qty_"], [id^="cash_"]').forEach(input => {
+    const parts = input.id.split('_');
+    const feeId = parts[1];
+    if (feeId) {
+      input.addEventListener('input', () => updateScholasticBalance(feeId));
+    }
+  });
+
+  function updateScholasticBalance(feeId) {
+    const qtyInput   = document.getElementById(`qty_${feeId}`);
+    const cashInput  = document.getElementById(`cash_${feeId}`);
+    const display    = document.getElementById(`remaining_${feeId}`);
+    if (!display) return;
+
+    // Read unit_price and monetary_value embedded as data- on the card
+    // We'll read from the card's data attributes set below
+    const card      = display.closest('.card');
+    if (!card) return;
+    const unitPrice = parseFloat(card.dataset.unitPrice || '0');
+    const totalVal  = parseFloat(card.dataset.monetaryValue || '0');
+    const alreadyQty = parseInt(card.dataset.alreadyQty || '0');
+    const alreadyCash = parseFloat(card.dataset.alreadyCash || '0');
+
+    const qtyNow   = parseInt(qtyInput  ? qtyInput.value  : 0) || 0;
+    const cashNow  = parseFloat(cashInput ? cashInput.value : 0) || 0;
+
+    const newQty    = alreadyQty + qtyNow;
+    const physCredit = newQty * unitPrice;
+    const totalCash  = alreadyCash + cashNow;
+    const newBalance = Math.max(0, totalVal - physCredit - totalCash);
+
+    display.textContent = 'UGX ' + Math.round(newBalance).toLocaleString();
+    display.className   = newBalance === 0
+      ? 'fw-bold text-success'
+      : 'fw-bold text-danger';
+  }
+</script>
+
+{# Embed data attributes on scholastic cards so JS can read them #}
+{% for detail in fee_details %}
+{% if detail.type == 'scholastic' %}
+<script>
+  (function() {
+    const card = document.getElementById('remaining_{{ detail.fee_id }}')?.closest('.card');
+    if (card) {
+      card.dataset.unitPrice      = '{{ detail.unit_price }}';
+      card.dataset.monetaryValue  = '{{ detail.monetary_value }}';
+      card.dataset.alreadyQty     = '{{ detail.quantity_brought_already }}';
+      card.dataset.alreadyCash    = '{{ detail.amount_paid }}';
+    }
+  })();
+</script>
+{% endif %}
+{% endfor %}
+{% endblock %}

@@ -27,19 +27,9 @@
 from django.urls import path
 
 from academics.views.term_views import (
-    term_add,
+    terms_list,
     term_delete,
-    term_detail_admissions,
-    term_detail_assessment_fees,
-    term_detail_assessments,
-    term_detail_calendar,
-    term_detail_fees,
-    term_detail_overview,
-    term_detail_payments,
-    term_detail_requirements,
-    term_edit,
-    term_list,
-    term_set_current,
+    term_update,
 )
 from academics.views.subject_views import (
     subject_list,
@@ -52,6 +42,13 @@ from academics.views.subject_views import (
     subject_detail_classes,
 )
 
+from academics.views.academic_yr_views import (
+    academic_year_list,
+    academic_year_create,
+    academic_year_update,
+    academic_year_delete
+)
+
 
 from academics.views import views
 
@@ -59,78 +56,28 @@ app_name = 'academics'
 
 urlpatterns = [
 
-    path("supported-classes/add/", views.school_supported_classes_form, name="school_supported_classes_form"),
+    path("supported-classes/add/", views.school_supported_classes_manage, name="school_supported_classes_manage"),
 
 
 
 
     # ── Term CRUD ─────────────────────────────────────────────────────────────
     path(
-        'terms/',
-        term_list,
-        name='term_list'
-    ),
-    path(
-        'terms/add/',
-        term_add,
-        name='term_add'
-    ),
-    path(
-        'terms/<int:pk>/edit/',
-        term_edit,
-        name='term_edit'
-    ),
-    path(
-        'terms/<int:pk>/delete/',
-        term_delete,
-        name='term_delete'
-    ),
-    path(
-        'terms/<int:pk>/set-current/',
-        term_set_current,
-        name='term_set_current'
+        "terms/",
+        terms_list,
+        name="terms_list"
     ),
 
-    # ── Term Detail sections ──────────────────────────────────────────────────
     path(
-        'terms/<int:pk>/',
-        term_detail_overview,
-        name='term_detail_overview'
+        "terms/update/<int:pk>/",
+        term_update,
+        name="term_update"
     ),
+
     path(
-        'terms/<int:pk>/calendar/',
-        term_detail_calendar,
-        name='term_detail_calendar'
-    ),
-    path(
-        'terms/<int:pk>/admissions/',
-        term_detail_admissions,
-        name='term_detail_admissions'
-    ),
-    path(
-        'terms/<int:pk>/requirements/',
-        term_detail_requirements,
-        name='term_detail_requirements'
-    ),
-    path(
-        'terms/<int:pk>/fees/',
-        term_detail_fees,
-        name='term_detail_fees'
-    ),
-    path(
-        'terms/<int:pk>/payments/',
-        term_detail_payments,
-        name='term_detail_payments'
-    ),
-    path(
-        'terms/<int:pk>/assessment-fees/',
-        term_detail_assessment_fees,
-        name='term_detail_assessment_fees'
-    ),
-    path(
-        'terms/<int:pk>/assessments/',
-        term_detail_assessments,
-        name='term_detail_assessments'
+        "terms/delete/<int:pk>/",
+        term_delete,
+        name="term_delete"
     ),
 
     # ════════════════════════════════════════════════════════════════════════
@@ -191,4 +138,38 @@ urlpatterns = [
         subject_detail_classes,
         name='subject_detail_classes'
     ),
+
+
+
+
+
+
+
+
+    path(
+        "academic-years/",
+        academic_year_list,
+        name="academic_year_list"
+    ),
+
+    path(
+        "academic-years/create/",
+        academic_year_create,
+        name="academic_year_create"
+    ),
+
+    path(
+        "academic-years/update/<int:pk>/",
+        academic_year_update,
+        name="academic_year_update"
+    ),
+
+    path(
+        "academic-years/delete/<int:pk>/",
+        academic_year_delete,
+        name="academic_year_delete"
+    ),
+
+
+
 ]

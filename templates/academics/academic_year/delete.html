@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="card shadow-sm border-danger">
+
+        <div class="card-header bg-danger text-white">
+
+            <h5 class="mb-0">
+                Confirm Delete
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <p class="mb-3">
+
+                Are you sure you want to delete:
+
+                <strong>
+                    {{ year.name }}
+                </strong> ?
+
+            </p>
+
+            <form method="POST">
+
+                {% csrf_token %}
+
+                <button
+                    class="btn btn-danger">
+
+                    <i class="bi bi-trash"></i>
+                    Yes, Delete
+
+                </button>
+
+                <a href="{% url 'academics:academic_year_list' %}"
+                   class="btn btn-secondary">
+
+                    Cancel
+
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

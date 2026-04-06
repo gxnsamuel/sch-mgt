@@ -5,29 +5,113 @@ from django.contrib import messages
 
 
 
-def school_supported_classes_form(request):
+
+def school_supported_classes_manage(request):
+
     classes = SchoolClass.objects.all()
 
-    if request.method == 'POST':
-        submitted_data = []
-        total_classes_supported =0
-        
+    supported_classes = (
+        SchoolSupportedClasses.objects
+        .select_related("supported_class")
+        .all()
+    )
+
+    # =========================
+    # ADD SUPPORTED CLASSES
+    # =========================
+
+    if request.method == "POST" and request.POST.get("action") == "create":
+
+        total_added = 0
+
         for c in classes:
-            class_ = request.POST.get(f"class_{c.key}")
 
-            if class_ == c.key:
-                submitted_data.append(c)
+            value = request.POST.get(
+                f"class_{c.key}"
+            )
 
-        for s in submitted_data:
-            if not SchoolSupportedClasses.objects.filter(supported_class=s).first():
-                SchoolSupportedClasses.objects.create(
-                    supported_class = s
+            if value == c.key:
+
+                exists = (
+                    SchoolSupportedClasses.objects
+                    .filter(
+                        supported_class=c
+                    )
+                    .exists()
                 )
-                total_classes_supported +=1
 
-        messages.success(request, f"{total_classes_supported} Classes are now supported by your School")
-        return redirect(reverse("dashboard"))
-    return render(request, "academics/class/school_supported_classes_form.html", {
-        "classes":classes
-    })
+                if not exists:
+
+                    SchoolSupportedClasses.objects.create(
+                        supported_class=c
+                    )
+
+                    total_added += 1
+
+        messages.success(
+            request,
+            f"{total_added} class(es) added."
+        )
+
+        return redirect(
+            reverse(
+                "academics:school_supported_classes_manage"
+            )
+        )
+
+    # =========================
+    # UPDATE SUPPORTED CLASSES
+    # =========================
+
+    if request.method == "POST" and request.POST.get("action") == "update":
+
+        total_updated = 0
+
+        # Clear existing
+
+        SchoolSupportedClasses.objects.all().delete()
+
+        for c in classes:
+
+            value = request.POST.get(
+                f"class_{c.key}"
+            )
+
+            if value == c.key:
+
+                SchoolSupportedClasses.objects.create(
+                    supported_class=c
+                )
+
+                total_updated += 1
+
+        messages.success(
+            request,
+            f"Supported classes updated ({total_updated})."
+        )
+
+        return redirect(
+            reverse(
+                "academics:school_supported_classes_manage"
+            )
+        )
+
+    supported_class_ids = (
+    SchoolSupportedClasses.objects
+    .values_list(
+        "supported_class_id",
+        flat=True
+    )
+)
+
+    return render(
+        request,
+        "academics/class/supported_classes_manage.html",
+        {
+            "classes": classes,
+            "supported_classes": supported_classes,
+            "supported_class_ids": supported_class_ids,
+        }
+    )
+
 

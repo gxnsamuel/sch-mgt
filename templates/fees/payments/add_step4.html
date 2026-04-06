@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width:860px;">
+
+  <h4 class="mb-1 fw-semibold">Review &amp; Confirm Payment</h4>
+  <p class="text-muted small mb-3">
+    Step 4 of 4 — Review what is about to be saved for
+    <strong>{{ step1.student_name }}</strong>
+    <span class="text-muted">({{ step1.student_id }} — {{ step1.student_class }})</span>,
+    then enter your password to confirm.
+  </p>
+
+  {# ── Payment Summary ──────────────────────────────────────────────────── #}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header py-2">
+      <i class="bi bi-receipt me-2 text-primary"></i>
+      <span class="fw-semibold">Payment Summary</span>
+      <span class="badge bg-primary ms-2">{{ summary|length }} item(s)</span>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Description</th>
+            <th>Term</th>
+            <th>Type</th>
+            <th class="text-end">Was Owed</th>
+            <th class="text-end">Paying Now</th>
+            <th class="text-end pe-3">Will Remain</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          {% for item in summary %}
+          <tr>
+            <td class="ps-3">
+              <div class="fw-semibold small">{{ item.label }}</div>
+            </td>
+            <td class="small text-muted">{{ item.term_label }}</td>
+            <td>
+              {% if item.type == 'school' %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">School</span>
+              {% elif item.type == 'assessment' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle small">Assessment</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">Scholastic</span>
+              {% endif %}
+            </td>
+
+            {% if item.type in 'school,assessment' %}
+            <td class="text-end small">UGX {{ item.amount_required|floatformat:0|intcomma }}</td>
+            <td class="text-end">
+              <span class="fw-semibold text-primary small">
+                UGX {{ item.amount_paying|floatformat:0|intcomma }}
+              </span>
+            </td>
+            <td class="text-end pe-3">
+              {% if item.will_clear %}
+                <span class="badge bg-success">CLEARED</span>
+              {% else %}
+                <span class="text-danger small fw-semibold">
+                  UGX {{ item.new_balance|floatformat:0|intcomma }}
+                </span>
+              {% endif %}
+            </td>
+
+            {% else %}{# scholastic #}
+            <td class="text-end small">
+              {{ item.quantity_required }} {{ item.unit }}<br>
+              <span class="text-muted" style="font-size:.72rem;">
+                UGX {{ item.amount_required|floatformat:0|intcomma }}
+              </span>
+            </td>
+            <td class="text-end small">
+              {% if item.quantity_bringing > 0 %}
+                <span class="text-primary fw-semibold">{{ item.quantity_bringing }} {{ item.unit }}</span><br>
+              {% endif %}
+              {% if item.cash_paying > 0 %}
+                <span class="text-primary fw-semibold">UGX {{ item.cash_paying|floatformat:0|intcomma }}</span><br>
+              {% endif %}
+              <span class="text-muted" style="font-size:.72rem;">
+                {{ item.new_total_qty }}/{{ item.quantity_required }} {{ item.unit }} total
+              </span>
+            </td>
+            <td class="text-end pe-3">
+              {% if item.will_clear %}
+                <span class="badge bg-success">CLEARED</span>
+              {% else %}
+                <span class="text-danger small fw-semibold">
+                  UGX {{ item.new_balance|floatformat:0|intcomma }}
+                </span>
+              {% endif %}
+            </td>
+            {% endif %}
+
+          </tr>
+          {% endfor %}
+
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td colspan="4" class="ps-3 fw-semibold">Total Cash Paying Now</td>
+            <td class="text-end fw-bold text-primary">
+              UGX
+              {% with total=0 %}
+              {# Sum monetary payments — computed in template as Django doesn't have sum filter #}
+              {% for item in summary %}
+                {% if item.type != 'scholastic' %}
+                  {# Django can't add Decimals in templates natively — show per-line, total computed by view if needed #}
+                {% endif %}
+              {% endfor %}
+              {% endwith %}
+              {# Simple approach: just show "see lines above" — totals live in the view #}
+              (see lines above)
+            </td>
+            <td class="pe-3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  {# ── What Will Still Be Pending ───────────────────────────────────────── #}
+  {% if remaining %}
+  <div class="card shadow-sm mb-4 border-warning">
+    <div class="card-header py-2 bg-warning bg-opacity-10">
+      <i class="bi bi-clock-history text-warning me-2"></i>
+      <span class="fw-semibold">Still Pending After This Payment</span>
+      <span class="badge bg-warning text-dark ms-2">{{ remaining|length }}</span>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Description</th>
+            <th>Term / Year</th>
+            <th>Class</th>
+            <th class="text-end pe-3">Balance (UGX)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rem in remaining %}
+          <tr>
+            <td class="ps-3 small fw-semibold">{{ rem.label }}</td>
+            <td class="small text-muted">{{ rem.term_label }} &mdash; {{ rem.year }}</td>
+            <td class="small text-muted">{{ rem.class_label }}</td>
+            <td class="text-end pe-3 text-danger small fw-semibold">
+              UGX {{ rem.amount_balance|floatformat:0|intcomma }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-success d-flex align-items-center mb-4">
+    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+    After this payment, <strong class="mx-1">{{ step1.student_name }}</strong>
+    will have no outstanding fees. All accounts cleared!
+  </div>
+  {% endif %}
+
+  {# ── Password Confirmation ────────────────────────────────────────────── #}
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="card shadow-sm mb-4 {% if pw_error %}border-danger{% endif %}">
+      <div class="card-header py-2">
+        <i class="bi bi-shield-lock me-2 text-secondary"></i>
+        <span class="fw-semibold">Handler Confirmation</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Enter <strong>your account password</strong> to authorise and save this payment.
+          This action cannot be undone without manual correction.
+        </p>
+
+        {% if pw_error %}
+        <div class="alert alert-danger py-2 d-flex align-items-center mb-3">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          {{ pw_error }}
+        </div>
+        {% endif %}
+
+        <div style="max-width:360px;">
+          <label class="form-label fw-semibold" for="confirm_password">
+            Your Password <span class="text-danger">*</span>
+          </label>
+          <div class="input-group">
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              class="form-control {% if pw_error %}is-invalid{% endif %}"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              autofocus
+            >
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    onclick="togglePw()">
+              <i class="bi bi-eye" id="pw-eye"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Actions ────────────────────────────────────────────────────────── #}
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex gap-2">
+        <button type="submit" name="action" value="cancel"
+                class="btn btn-outline-danger">
+          <i class="bi bi-x-circle me-1"></i> Cancel
+        </button>
+        <button type="submit" name="action" value="back"
+                class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i> Back
+        </button>
+      </div>
+      <button type="submit" class="btn btn-success px-4 fw-semibold">
+        <i class="bi bi-save me-1"></i> Confirm &amp; Save Payment
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  function togglePw() {
+    const input = document.getElementById('confirm_password');
+    const eye   = document.getElementById('pw-eye');
+    if (input.type === 'password') {
+      input.type    = 'text';
+      eye.className = 'bi bi-eye-slash';
+    } else {
+      input.type    = 'password';
+      eye.className = 'bi bi-eye';
+    }
+  }
+</script>
+{% endblock %}

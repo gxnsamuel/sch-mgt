@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width:680px;">
+
+  {# ── Step Indicator ───────────────────────────────────────────────────── #}
+{#   {% include "fees/payments/_wizard_steps.html" with current_step=1 %} #}
+
+  <h4 class="mb-1 fw-semibold">Add Payment</h4>
+  <p class="text-muted small mb-4">Step 1 of 4 — Identify the student and select what you are collecting.</p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {# ── Student ID ───────────────────────────────────────────────────────── #}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header py-2">
+        <span class="fw-semibold">Student Account</span>
+      </div>
+      <div class="card-body">
+        <label class="form-label" for="student_id">Student ID</label>
+        <input
+          type="text"
+          id="student_id"
+          name="student_id"
+          class="form-control {% if errors.student_id %}is-invalid{% endif %}"
+          placeholder="e.g. STD2025001"
+          value="{{ existing.student_id|default:post.student_id }}"
+          autocomplete="off"
+          autofocus
+        >
+        {% if errors.student_id %}
+          <div class="invalid-feedback">{{ errors.student_id }}</div>
+        {% endif %}
+        <div class="form-text">Enter the student's unique school ID number.</div>
+      </div>
+    </div>
+
+    {# ── Payment Types ────────────────────────────────────────────────────── #}
+    <div class="card shadow-sm mb-4">
+      <div class="card-header py-2">
+        <span class="fw-semibold">Payment Type(s)</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Select one or more types. You can process multiple types in one transaction.
+        </p>
+
+        {% if errors.payment_types %}
+          <div class="alert alert-danger py-2 small">{{ errors.payment_types }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+          {% for value, label in payment_type_choices %}
+          <div class="col-md-4">
+            <div class="card h-100 border {% if value in existing.payment_types or value in post.payment_types %}border-primary bg-primary bg-opacity-10{% endif %} payment-type-card"
+                 role="button"
+                 onclick="toggleType(this, '{{ value }}')">
+              <div class="card-body text-center py-3">
+                <div class="mb-2">
+                  {% if value == 'school' %}
+                    <i class="bi bi-cash-coin fs-2 text-primary"></i>
+                  {% elif value == 'assessment' %}
+                    <i class="bi bi-clipboard-check fs-2 text-success"></i>
+                  {% else %}
+                    <i class="bi bi-box-seam fs-2 text-warning"></i>
+                  {% endif %}
+                </div>
+                <div class="fw-semibold small">{{ label }}</div>
+                <input
+                  type="checkbox"
+                  name="payment_types"
+                  value="{{ value }}"
+                  class="d-none"
+                  {% if value in existing.payment_types or value in post.payment_types %}checked{% endif %}
+                >
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+      </div>
+    </div>
+
+    {# ── Actions ──────────────────────────────────────────────────────────── #}
+    <div class="d-flex justify-content-between align-items-center">
+      <button type="submit" name="action" value="cancel"
+              class="btn btn-outline-danger">
+        <i class="bi bi-x-circle me-1"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-primary px-4">
+        Continue <i class="bi bi-arrow-right ms-1"></i>
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<style>
+  .payment-type-card { cursor: pointer; transition: all .15s; user-select: none; }
+  .payment-type-card:hover { border-color: #0d6efd !important; }
+  .payment-type-card.selected { border-color: #0d6efd !important; background: rgba(13,110,253,.07); }
+</style>
+
+<script>
+  // Sync card visual state with hidden checkbox
+  document.querySelectorAll('.payment-type-card').forEach(card => {
+    const cb = card.querySelector('input[type=checkbox]');
+    if (cb.checked) card.classList.add('selected');
+  });
+
+  function toggleType(card, value) {
+    const cb = card.querySelector('input[type=checkbox]');
+    cb.checked = !cb.checked;
+    card.classList.toggle('selected', cb.checked);
+    card.classList.toggle('border-primary', cb.checked);
+    card.classList.toggle('bg-primary', cb.checked);
+    card.classList.toggle('bg-opacity-10', cb.checked);
+  }
+</script>
+{% endblock %}

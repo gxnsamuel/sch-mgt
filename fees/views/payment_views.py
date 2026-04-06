@@ -30,7 +30,7 @@ from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
 from academics.models import SchoolClass, Term
-from fees.models import FeesPayment, SchoolFees,AssessmentFees
+from fees.models import FeesPayment, SchoolFees,AssessmentFees,FeesClass
 from fees.utils.fees_utils import FEES_TYPE_LABELS
 from fees.utils.payment_utils import (
     generate_receipt_number,
@@ -285,13 +285,40 @@ def add_payment(request):
 
         messages.info(request, "Payment process reset.")
         return redirect("fees:add_payment")
+    
+
+
+    # ---------------------------------------------------------
+    # CANCEL PAYMENT PROCESS — CLEAR ALL SESSION STATE
+    # ---------------------------------------------------------
+    if request.method == "POST" and request.POST.get("action") == "cancel_payment":
+
+        keys_to_clear = [
+            "payment_part1_done",
+            "payment_part2_done",
+            "payment_type",
+            "student_id",
+            "class_id",
+            "student_mini",
+            "fees_list",
+            "selected_fee_ids",
+            "selected_fees",
+        ]
+
+        for key in keys_to_clear:
+            request.session.pop(key, None)
+
+        request.session.modified = True
+
+        messages.info(request, "Payment process cancelled.")
+
+        return redirect("fees:add_payment")
+
 
     # ------------------------------------------------------------------
     # POST — PART 1 SUBMISSION
     # ------------------------------------------------------------------
-    if request.method == "POST" and not request.session.get(
-        "payment_part1_done"
-    ):
+    if request.method == "POST" and not request.session.get("payment_part1_done"):
 
         student_id = request.POST.get("student")
         payment_type = request.POST.get("payment_type")
@@ -307,7 +334,7 @@ def add_payment(request):
             try:
                 student = (
                     Student.objects.select_related("current_class")
-                    .filter(pk=student_id, is_active=True)
+                    .filter(student_id=student_id, is_active=True)
                     .first()
                 )
 
@@ -347,7 +374,7 @@ def add_payment(request):
             "id": student.pk,
             "student_id": student.student_id,
             "name": student.full_name,
-            "class": current_class.display_name,
+            "class": current_class.supported_class.name,
         }
 
         # ------------------------------------------------------------------
@@ -359,48 +386,40 @@ def add_payment(request):
         # ASSESSMENT FEES
         # ==============================
         if payment_type == "assessment":
-
-            assessments = (
-                AssessmentFees.objects.filter(
-                    school_class=current_class,
-                    is_active=True,
-                )
-                .order_by("name")
-            )
+            # AssessmentFees for this class via FeesClass junction
+            fees_class_qs = FeesClass.objects.filter(
+                school_class=current_class,
+                assessment_fee__isnull=False,
+            ).select_related('assessment_fee', 'assessment_fee__assessment', 'assessment_fee__term')
 
             fees_list = [
                 {
-                    "id": a.pk,
-                    "name": a.name,
-                    "amount": float(a.amount),
+                    "id":     fc.assessment_fee.pk,
+                    "name":   fc.assessment_fee.assessment.title,
+                    "term":   fc.assessment_fee.term.name,
+                    "amount": float(fc.assessment_fee.amount),
                 }
-                for a in assessments
+                for fc in fees_class_qs
+                if fc.assessment_fee.amount is not None
             ]
 
-        # ==============================
-        # SCHOOL FEES
-        # ==============================
         elif payment_type == "school":
-
-            school_fees = (
-                SchoolFees.objects.filter(
-                    school_class=current_class,
-                    is_active=True,
-                )
-                .select_related("term")
-                .order_by("term__start_date")
-            )
+            # SchoolFees for this class via FeesClass junction
+            fees_class_qs = FeesClass.objects.filter(
+                school_class=current_class,
+                fees__isnull=False,
+                fees__is_active=True,
+            ).select_related('fees', 'fees__term')
 
             fees_list = [
                 {
-                    "id": f.pk,
-                    "type": f.get_fees_type_display(),
-                    "term": f.term.name,
-                    "amount": float(f.amount),
+                    "id":     fc.fees.pk,
+                    "type":   fc.fees.get_fees_type_display(),
+                    "term":   fc.fees.term.name,
+                    "amount": float(fc.fees.amount),
                 }
-                for f in school_fees
+                for fc in fees_class_qs
             ]
-
         # ------------------------------------------------------------------
         # Store everything in session
         # ------------------------------------------------------------------
@@ -418,18 +437,85 @@ def add_payment(request):
         # Redirect to same page (multi-step pattern)
         return redirect("fees:add_payment")
 
+
+
+
+    # ------------------------------------------------------------------
+    # POST — PART 2 SUBMISSION
+    # ------------------------------------------------------------------
+    if request.method == "POST" and request.POST.get("step") == "part2":
+
+        # Safety: ensure Part 1 completed
+        if not request.session.get("payment_part1_done"):
+            messages.error(request, "Step 1 must be completed first.")
+            return redirect("fees:add_payment")
+        
+
+
+
+        selected_ids = [
+            request.POST[key]
+            for key in request.POST
+            if key.startswith("fee_")
+        ]
+
+        # Validate selection
+        if not selected_ids:
+            messages.error(request, "Select at least one fee to continue.")
+            return redirect("fees:add_payment")
+
+        fees_list = request.session.get("fees_list", [])
+
+        selected_fees = [
+            fee for fee in fees_list
+            if str(fee.get("id")) in selected_ids  # both are strings now — safe
+        ]
+
+
+
+        # # Retrieve available fees from session
+        # fees_list = request.session.get("fees_list", [])
+
+        # # Filter only selected fees
+        # selected_fees = [
+        #     fee for fee in fees_list
+        #         if str(fee.get("id")) in selected_ids
+        # ]
+
+        if not selected_fees:
+            messages.error(request, "Invalid fee selection.")
+            return redirect("fees:add_payment")
+
+        # Store session state
+        request.session["payment_part2_done"] = True
+        request.session["selected_fee_ids"] = selected_ids
+        request.session["selected_fees"] = selected_fees
+
+        request.session.modified = True
+
+        messages.success(request, "Fees selected successfully.")
+
+        return redirect("fees:add_payment")
+
     # ------------------------------------------------------------------
     # GET — Render page based on session flag
     # ------------------------------------------------------------------
+    steps = {
+        "payment_part1_done": request.session.get("payment_part1_done", False),
+        "payment_part2_done": request.session.get("payment_part2_done", False),
+        "payment_part3_done": request.session.get("payment_part3_done", False),
+    }
+
+
+
     context = {
-        "payment_part1_done": request.session.get(
-            "payment_part1_done", False
-        ),
+        
         "payment_type_choices": PAYMENT_TYPE_CHOICES,
         "students": Student.objects.filter(is_active=True),
         "student_mini": request.session.get("student_mini"),
         "fees_list": request.session.get("fees_list", []),
         "payment_type": request.session.get("payment_type"),
+        **steps
     }
 
     return render(request, f'{_T}form.html', context)

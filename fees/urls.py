@@ -27,6 +27,14 @@ from fees.views.assessment_fees_views import (
     assessment_fees_bulk_generate,
 )
 
+
+from fees.views.payment_add_views import (
+    payment_add_step1, payment_add_step2,
+    payment_add_step3, payment_add_step4,
+)
+
+
+
 app_name = 'fees'
 
 urlpatterns = [
@@ -74,4 +82,13 @@ urlpatterns = [
     path('assessment-fees/<int:pk>/edit/',            assessment_fees_edit,          name='assessment_fees_edit'),
     path('assessment-fees/<int:pk>/delete/',          assessment_fees_delete,        name='assessment_fees_delete'),
     path('assessment-fees/<int:pk>/recalculate/',     assessment_fees_recalculate,   name='assessment_fees_recalculate'),
+
+
+
+
+    path('payments/add/step1/', payment_add_step1, name='payment_add_step1'),
+    path('payments/add/step2/', payment_add_step2, name='payment_add_step2'),
+    path('payments/add/step3/', payment_add_step3, name='payment_add_step3'),
+    path('payments/add/step4/', payment_add_step4, name='payment_add_step4'),
+
 ]

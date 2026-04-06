@@ -13,7 +13,7 @@ from django.db import models
 
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
-from academics.models import SchoolStream
+from academics.models import SchoolStream, SchoolSupportedClasses
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -405,3 +405,19 @@ class Admission(TimeStampedModel):
             f"{self.first_name} {self.last_name} "
             f"({self.academic_year})"
         )
+
+
+
+
+
+
+class StudentClassPromotion(TimeStampedModel):
+    student = models.ForeignKey(Student, related_name='student_class_promotion', on_delete=models.CASCADE)
+    from_class = models.ForeignKey(SchoolSupportedClasses, related_name='student_class_promotion_from', on_delete=models.CASCADE)
+    to_class = models.ForeignKey(SchoolSupportedClasses, related_name='student_class_promotion_to', on_delete=models.CASCADE)
+    from_year =models.CharField(max_length=5)
+    year_year =models.CharField(max_length=5)
+    is_to_class_the_current = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.student.student_id

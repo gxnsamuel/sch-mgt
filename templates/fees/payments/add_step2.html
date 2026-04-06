@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width:860px;">
+
+  {# ── Step Indicator ───────────────────────────────────────────────────── #}
+  <div class="d-flex align-items-center mb-4">
+    {% for n, lbl in "1:Identify,2:Select Fees,3:Enter Amounts,4:Confirm"|dictsort:0 %}{% endfor %}
+    {# Hardcoded 4-step bar — current = 2 #}
+    <div class="wizard-bar d-flex align-items-center w-100">
+      {% for step_info in "1:Identify|2:Select Fees|3:Enter Amounts|4:Confirm"|split:"|" %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Simple inline step bar #}
+  <div class="d-flex align-items-center mb-4 px-1" id="step-bar">
+    {% for n, lbl in "1,Identify|2,Select Fees|3,Enter Amounts|4,Confirm"|split:"|" %}{% endfor %}
+  </div>
+  {% include "fees/payments/_step_bar.html" with step=2 %}
+
+  <h4 class="mb-1 fw-semibold">Select Fees to Process</h4>
+  <p class="text-muted small mb-3">
+    Step 2 of 4 — Tick the fee items you are collecting for
+    <strong>{{ step1.student_name }}</strong>
+    <span class="text-muted">({{ step1.student_id }} — {{ step1.student_class }})</span>.
+  </p>
+
+  {% if error %}
+    <div class="alert alert-danger py-2">{{ error }}</div>
+  {% endif %}
+
+  {% if not grouped_fees %}
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle me-2"></i>
+      No pending fees found for this student for the selected payment type(s).
+      All fees are already fully paid.
+    </div>
+    <div class="d-flex justify-content-between mt-3">
+      <a href="{% url 'fees:payment_add_step1' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
+      <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-danger">
+        <i class="bi bi-x-circle me-1"></i> Cancel
+      </a>
+    </div>
+  {% else %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% for fee_type, group in grouped_fees.items %}
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between py-2">
+        <div>
+          {% if fee_type == 'school' %}
+            <i class="bi bi-cash-coin text-primary me-2"></i>
+          {% elif fee_type == 'assessment' %}
+            <i class="bi bi-clipboard-check text-success me-2"></i>
+          {% else %}
+            <i class="bi bi-box-seam text-warning me-2"></i>
+          {% endif %}
+          <span class="fw-semibold">{{ group.label }}</span>
+          <span class="badge bg-secondary ms-2">{{ group.items|length }}</span>
+        </div>
+        <button type="button"
+                class="btn btn-link btn-sm text-decoration-none p-0"
+                onclick="selectAll('{{ fee_type }}')">
+          Select all
+        </button>
+      </div>
+
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:42px;" class="ps-3">
+                <input type="checkbox" class="form-check-input"
+                       id="chk_all_{{ fee_type }}"
+                       onchange="toggleGroup('{{ fee_type }}', this.checked)">
+              </th>
+              <th>Description</th>
+              <th>Term</th>
+              {% if fee_type == 'scholastic' %}
+              <th>Required</th>
+              <th>Already Brought</th>
+              {% else %}
+              <th>Total Amount</th>
+              <th>Paid So Far</th>
+              {% endif %}
+              <th class="text-end pe-3">
+                {% if fee_type == 'scholastic' %}Balance (UGX){% else %}Balance (UGX){% endif %}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fee in group.items %}
+            <tr class="fee-row-{{ fee_type }}"
+                onclick="toggleRow(this, '{{ fee_type }}', {{ fee.fee_id }})"
+                style="cursor:pointer;"
+                id="row_{{ fee_type }}_{{ fee.fee_id }}">
+              <td class="ps-3">
+                <input type="checkbox"
+                       class="form-check-input fee-cb-{{ fee_type }}"
+                       name="select_{{ fee_type }}_{{ fee.fee_id }}"
+                       value="{{ fee.fee_id }}"
+                       {% if fee_type|add:"_"|add:fee.fee_id|stringformat:"s" in prev_selected %}checked{% endif %}
+                       onclick="event.stopPropagation();"
+                       onchange="syncRowHighlight(this, '{{ fee_type }}', {{ fee.fee_id }})">
+              </td>
+              <td>
+                <div class="fw-semibold small">{{ fee.label }}</div>
+                <div class="text-muted" style="font-size:.75rem;">{{ fee.class_label }} &mdash; {{ fee.year }}</div>
+              </td>
+              <td class="small">{{ fee.term_label }}</td>
+
+              {% if fee_type == 'scholastic' %}
+              <td class="small">
+                {{ fee.quantity_required }} {{ fee.unit }}
+                <div class="text-muted" style="font-size:.72rem;">UGX {{ fee.amount_required|floatformat:0|intcomma }}</div>
+              </td>
+              <td class="small">
+                {{ fee.quantity_brought }} {{ fee.unit }}
+                <div class="text-muted" style="font-size:.72rem;">UGX {{ fee.amount_paid|floatformat:0|intcomma }} cash</div>
+              </td>
+              {% else %}
+              <td class="small">UGX {{ fee.amount_required|floatformat:0|intcomma }}</td>
+              <td class="small">UGX {{ fee.amount_paid|floatformat:0|intcomma }}</td>
+              {% endif %}
+
+              <td class="text-end pe-3">
+                <span class="fw-semibold text-danger small">
+                  UGX {{ fee.amount_balance|floatformat:0|intcomma }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% endfor %}
+
+    {# ── Actions ────────────────────────────────────────────────────────── #}
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <div class="d-flex gap-2">
+        <button type="submit" name="action" value="cancel"
+                class="btn btn-outline-danger">
+          <i class="bi bi-x-circle me-1"></i> Cancel
+        </button>
+        <button type="submit" name="action" value="back"
+                class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i> Back
+        </button>
+      </div>
+      <button type="submit" class="btn btn-primary px-4">
+        Continue <i class="bi bi-arrow-right ms-1"></i>
+      </button>
+    </div>
+
+  </form>
+  {% endif %}
+
+</div>
+
+<script>
+  // Highlight row when checkbox changes
+  function syncRowHighlight(cb, ftype, feeId) {
+    const row = document.getElementById(`row_${ftype}_${feeId}`);
+    if (row) row.classList.toggle('table-primary', cb.checked);
+  }
+
+  // Clicking the row toggles the checkbox
+  function toggleRow(row, ftype, feeId) {
+    const cb = row.querySelector(`input[name="select_${ftype}_${feeId}"]`);
+    if (!cb) return;
+    cb.checked = !cb.checked;
+    row.classList.toggle('table-primary', cb.checked);
+    syncGroupHeader(ftype);
+  }
+
+  // "Select all" header checkbox
+  function toggleGroup(ftype, checked) {
+    document.querySelectorAll(`.fee-cb-${ftype}`).forEach(cb => {
+      cb.checked = checked;
+      const row = document.getElementById(`row_${ftype}_${cb.value}`);
+      if (row) row.classList.toggle('table-primary', checked);
+    });
+  }
+
+  // "Select all" button link
+  function selectAll(ftype) {
+    const allChecked = [...document.querySelectorAll(`.fee-cb-${ftype}`)].every(c => c.checked);
+    toggleGroup(ftype, !allChecked);
+    const hdr = document.getElementById(`chk_all_${ftype}`);
+    if (hdr) hdr.checked = !allChecked;
+  }
+
+  // Keep header checkbox in sync
+  function syncGroupHeader(ftype) {
+    const cbs    = [...document.querySelectorAll(`.fee-cb-${ftype}`)];
+    const allChk = cbs.every(c => c.checked);
+    const hdr    = document.getElementById(`chk_all_${ftype}`);
+    if (hdr) hdr.checked = allChk;
+  }
+
+  // Init highlight for pre-selected rows (coming back from step 3)
+  document.querySelectorAll('input[type=checkbox][name^="select_"]').forEach(cb => {
+    if (cb.checked) {
+      const parts = cb.name.split('_');           // select_school_5
+      const ftype = parts[1];
+      const feeId = parts[2];
+      const row   = document.getElementById(`row_${ftype}_${feeId}`);
+      if (row) row.classList.add('table-primary');
+    }
+  });
+</script>
+{% endblock %}

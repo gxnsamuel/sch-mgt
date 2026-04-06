@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between mb-3">
+
+        <h4>
+            School Terms
+        </h4>
+
+        <button
+            class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#addTermModal">
+
+            <i class="bi bi-plus-circle"></i>
+            Add Term
+
+        </button>
+
+    </div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-bordered table-hover align-middle">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th>Term</th>
+                            <th>Academic Year</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th width="170">Actions</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for term in terms %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ term.name }}
+
+                                {% if term.is_current %}
+                                <span class="badge bg-primary">
+                                    Current
+                                </span>
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+
+                                {{ term.academic_year.name }}
+
+                            </td>
+
+                            <td>
+
+                                {{ term.start_date }}
+
+                            </td>
+
+                            <td>
+
+                                {{ term.end_date }}
+
+                            </td>
+
+                            <td>
+
+                                <button
+                                    class="btn btn-sm btn-warning"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editModal{{ term.id }}">
+
+                                    <i class="bi bi-pencil"></i>
+
+                                </button>
+
+                                <button
+                                    class="btn btn-sm btn-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal{{ term.id }}">
+
+                                    <i class="bi bi-trash"></i>
+
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                        <!-- EDIT MODAL -->
+
+                        <div
+                            class="modal fade"
+                            id="editModal{{ term.id }}">
+
+                            <div class="modal-dialog">
+
+                                <div class="modal-content">
+
+                                    <form
+                                        method="POST"
+                                        action="{% url 'academics:term_update' term.id %}">
+
+                                        {% csrf_token %}
+
+                                        <div class="modal-header">
+
+                                            <h5>
+                                                Edit Term
+                                            </h5>
+
+                                            <button
+                                                type="button"
+                                                class="btn-close"
+                                                data-bs-dismiss="modal">
+                                            </button>
+
+                                        </div>
+
+                                        <div class="modal-body">
+
+                                            <label>
+                                                Term Name
+                                            </label>
+
+                                            <select
+                                                name="name"
+                                                class="form-select mb-3">
+
+                                                <option value="Term 1"
+                                                {% if term.name == "Term 1" %}
+                                                selected
+                                                {% endif %}>
+                                                    Term 1
+                                                </option>
+
+                                                <option value="Term 2"
+                                                {% if term.name == "Term 2" %}
+                                                selected
+                                                {% endif %}>
+                                                    Term 2
+                                                </option>
+
+                                                <option value="Term 3"
+                                                {% if term.name == "Term 3" %}
+                                                selected
+                                                {% endif %}>
+                                                    Term 3
+                                                </option>
+
+                                            </select>
+
+                                            <label>
+                                                Academic Year
+                                            </label>
+
+                                            <select
+                                                name="academic_year"
+                                                class="form-select mb-3">
+
+                                                {% for year in academic_years %}
+
+                                                <option
+                                                    value="{{ year.id }}"
+                                                    {% if year.id == term.academic_year.id %}
+                                                    selected
+                                                    {% endif %}>
+
+                                                    {{ year.name }}
+
+                                                </option>
+
+                                                {% endfor %}
+
+                                            </select>
+
+                                            <input
+                                                type="date"
+                                                name="start_date"
+                                                value="{{ term.start_date|date:'Y-m-d' }}"
+                                                class="form-control mb-3">
+
+                                            <input
+                                                type="date"
+                                                name="end_date"
+                                                value="{{ term.end_date|date:'Y-m-d' }}"
+                                                class="form-control">
+
+                                        </div>
+
+                                        <div class="modal-footer">
+
+                                            <button
+                                                class="btn btn-success">
+
+                                                Update
+
+                                            </button>
+
+                                        </div>
+
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- DELETE MODAL -->
+
+                        <div
+                            class="modal fade"
+                            id="deleteModal{{ term.id }}">
+
+                            <div class="modal-dialog">
+
+                                <div class="modal-content">
+
+                                    <form
+                                        method="POST"
+                                        action="{% url 'academics:term_delete' term.id %}">
+
+                                        {% csrf_token %}
+
+                                        <div class="modal-header bg-danger text-white">
+
+                                            <h5>
+
+                                                Delete Term
+
+                                            </h5>
+
+                                        </div>
+
+                                        <div class="modal-body">
+
+                                            <p>
+
+                                                Delete
+
+                                                <strong>
+                                                    {{ term.name }}
+                                                </strong> ?
+
+                                            </p>
+
+                                            <label class="form-label">
+
+                                                Enter Password
+
+                                            </label>
+
+                                            <input
+                                                type="password"
+                                                name="password"
+                                                class="form-control"
+                                                required>
+
+                                        </div>
+
+                                        <div class="modal-footer">
+
+                                            <button
+                                                class="btn btn-danger">
+
+                                                Confirm Delete
+
+                                            </button>
+
+                                        </div>
+
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        {% empty %}
+
+                        <tr>
+
+                            <td colspan="5"
+                                class="text-center">
+
+                                No terms found
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+<div
+    class="modal fade"
+    id="addTermModal">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <form method="POST">
+
+                {% csrf_token %}
+
+                <input
+                    type="hidden"
+                    name="action"
+                    value="create">
+
+                <div class="modal-header">
+
+                    <h5>
+
+                        Add Term
+
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <label>
+                        Term Name
+                    </label>
+
+                    <select
+                        name="name"
+                        class="form-select mb-3"
+                        required>
+
+                        <option value="">
+                            Select Term
+                        </option>
+
+                        <option>
+                            Term 1
+                        </option>
+
+                        <option>
+                            Term 2
+                        </option>
+
+                        <option>
+                            Term 3
+                        </option>
+
+                    </select>
+
+                    <label>
+                        Academic Year
+                    </label>
+
+                    <select
+                        name="academic_year"
+                        class="form-select mb-3"
+                        required>
+
+                        {% for year in academic_years %}
+
+                        <option
+                            value="{{ year.id }}">
+
+                            {{ year.name }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <input
+                        type="date"
+                        name="start_date"
+                        class="form-control mb-3"
+                        required>
+
+                    <input
+                        type="date"
+                        name="end_date"
+                        class="form-control"
+                        required>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        class="btn btn-primary">
+
+                        Save Term
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+{% endblock %}

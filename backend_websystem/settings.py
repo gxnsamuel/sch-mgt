@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
 
     "django_hosts",
     "authentication",
@@ -150,6 +151,26 @@ LOGIN_URL = '/auth/login/'
 
 ROOT_HOSTCONF = 'backend_websystem.hosts'
 DEFAULT_HOST = 'www' 
+
+
+
+
+from django.contrib.messages import constants as messages
+
+
+MESSAGE_TAGS = {
+
+    messages.DEBUG: 'secondary',
+
+    messages.INFO: 'info',
+
+    messages.SUCCESS: 'success',
+
+    messages.WARNING: 'warning',
+
+    messages.ERROR: 'danger',
+
+}
 
 
 

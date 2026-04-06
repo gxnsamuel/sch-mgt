@@ -201,7 +201,14 @@
 
         <div class="nav-section-label">Academics</div>
 
+
+
         <a href="{% url 'academics:term_list' %}" class="nav-link {% if 'term' in request.resolver_match.url_name %}active{% endif %}">
+          <span class="nav-icon"><i class="bi bi-calendar3"></i></span>
+          <span class="nav-label">Terms</span>
+        </a>
+
+                <a href="{% url 'academics:term_list' %}" class="nav-link {% if 'term' in request.resolver_match.url_name %}active{% endif %}">
           <span class="nav-icon"><i class="bi bi-calendar3"></i></span>
           <span class="nav-label">Terms</span>
         </a>

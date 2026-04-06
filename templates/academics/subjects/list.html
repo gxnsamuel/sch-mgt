@@ -20,34 +20,6 @@
   </a>
 </div>
 
-<!-- Stats Row -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-value text-dark">{{ total_subjects|default:"0" }}</div>
-      <div class="stat-label">Total Subjects</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-value text-success">{{ active_subjects|default:"0" }}</div>
-      <div class="stat-label">Active</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-value text-primary">{{ compulsory_subjects|default:"0" }}</div>
-      <div class="stat-label">Compulsory</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-value text-secondary">{{ inactive_subjects|default:"0" }}</div>
-      <div class="stat-label">Inactive</div>
-    </div>
-  </div>
-</div>
-
 <!-- Filters Card -->
 <div class="card mb-4">
   <div class="card-body py-3">
@@ -60,15 +32,6 @@
         </div>
       </div>
       <div class="col-6 col-md-2">
-        <label class="form-label fw-700 small mb-1">Level</label>
-        <select class="form-select form-select-sm" name="level">
-          <option value="">All Levels</option>
-          {% for key, label in level_choices %}
-          <option value="{{ key }}" {% if level_filter == key %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-6 col-md-2">
         <label class="form-label fw-700 small mb-1">Status</label>
         <select class="form-select form-select-sm" name="status">
           <option value="">All</option>
@@ -76,15 +39,8 @@
           <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
         </select>
       </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label fw-700 small mb-1">Compulsory</label>
-        <select class="form-select form-select-sm" name="compulsory">
-          <option value="">All</option>
-          <option value="1" {% if compulsory_filter == '1' %}selected{% endif %}>Compulsory</option>
-          <option value="0" {% if compulsory_filter == '0' %}selected{% endif %}>Optional</option>
-        </select>
-      </div>
-      <div class="col-6 col-md-2 d-flex gap-2">
+
+      <div class="col-6 col-md-2 d-flex gap-2 ms-auto">
         <button type="submit" class="btn btn-primary btn-sm flex-fill">
           <i class="bi bi-funnel me-1"></i>Filter
         </button>
