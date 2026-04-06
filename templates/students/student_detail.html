@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block breadcrumb %}
+
+{% load dict_extras %}
 <li class="breadcrumb-item"><a href="{% url 'students:student_list' %}" class="text-secondary">Students</a></li>
 <li class="breadcrumb-item active">{{ student.student_id }}</li>
 {% endblock %}

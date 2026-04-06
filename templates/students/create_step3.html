@@ -49,7 +49,7 @@
           <dd class="col-7">{{ student_data.gender|title }}</dd>
           {% if applied_class %}
           <dt class="col-5 text-muted fw-700">Class</dt>
-          <dd class="col-7">{{ applied_class.display_name }}</dd>
+          <dd class="col-7">{{ applied_class.supported_class.name }}</dd>
           {% endif %}
           <dt class="col-5 text-muted fw-700">Academic Year</dt>
           <dd class="col-7 font-monospace">{{ student_data.academic_year }}</dd>

@@ -77,7 +77,6 @@ class ParentProfile(models.Model):
     # ── Portal access token ───────────────────────────────────────────────────
     access_token = models.CharField(
                        max_length=64,
-                       unique=True,
                        help_text=(
                            'Opaque token used as the parent portal login password. '
                            'Generated once at account creation. Shared across all '

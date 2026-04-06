@@ -135,34 +135,37 @@
 
           <div class="col-12 col-sm-5">
             <label class="form-label fw-700 small">Student ID <span class="text-danger">*</span></label>
-            <input type="text" name="student_id"
+            <input type="text" name="student_id" readonly="true"
               class="form-control font-monospace {% if errors.student_id %}is-invalid{% endif %}"
               value="{{ post.student_id|default:suggested_id }}" maxlength="20"/>
             <div class="form-text">Auto-suggested. Change only if needed.</div>
             {% if errors.student_id %}<div class="invalid-feedback">{{ errors.student_id }}</div>{% endif %}
           </div>
 
+
+
+
+
           <div class="col-12 col-sm-7">
             <label class="form-label fw-700 small">Class <span class="text-danger">*</span></label>
-            <select name="current_class" class="form-select {% if errors.current_class %}is-invalid{% endif %}">
+            <select name="current_class" class="form-select {% if errors.applied_class %}is-invalid{% endif %}">
               <option value="">— Select —</option>
-              <optgroup label="Nursery">
-                {% for cls in all_classes %}{% if cls.section == 'nursery' %}
-                <option value="{{ cls.pk }}" {% if post.current_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.display_name }}</option>
-                {% endif %}{% endfor %}
-              </optgroup>
-              <optgroup label="Primary">
-                {% for cls in all_classes %}{% if cls.section == 'primary' %}
-                <option value="{{ cls.pk }}" {% if post.current_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.display_name }}</option>
-                {% endif %}{% endfor %}
-              </optgroup>
+              {% for cls in all_classes %}
+                {% if cls.supported_class.section == 'nursery' %}
+                  <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.supported_class.name }}</option>
+                {% elif cls.supported_class.section == 'primary' %}
+                  <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.supported_class.name }}</option>
+                {% endif %}
+              {% endfor %}
             </select>
-            {% if errors.current_class %}<div class="invalid-feedback">{{ errors.current_class }}</div>{% endif %}
+            {% if errors.applied_class %}<div class="invalid-feedback">{{ errors.applied_class }}</div>{% endif %}
           </div>
+
+
 
           <div class="col-12 col-sm-4">
             <label class="form-label fw-700 small">Academic Year <span class="text-danger">*</span></label>
-            <input type="text" name="academic_year"
+            <input type="text" name="academic_year" readonly="true"
               class="form-control font-monospace {% if errors.academic_year %}is-invalid{% endif %}"
               value="{{ post.academic_year|default:current_year }}" maxlength="9"/>
             {% if errors.academic_year %}<div class="invalid-feedback">{{ errors.academic_year }}</div>{% endif %}

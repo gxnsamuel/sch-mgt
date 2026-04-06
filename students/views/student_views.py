@@ -29,7 +29,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from academics.models import SchoolClass
+from academics.models import SchoolClass,SchoolSupportedClasses
 from students.models import Student, StudentParentRelationship
 from students.utils.admission_utils import (
     RELATIONSHIP_CHOICES,
@@ -62,9 +62,7 @@ _CLASS_LEVEL_CHOICES = [
 
 
 def _get_class_lookups():
-    return SchoolClass.objects.filter(
-        is_active=True
-    ).order_by('section', 'level', 'stream')
+    return SchoolSupportedClasses.objects.order_by('supported_class__section')
 
 
 def _progress_ctx(current_step: int) -> dict:
@@ -204,10 +202,10 @@ def student_create_step3(request):
     applied_class = None
     if student_data.get('current_class_id'):
         try:
-            applied_class = SchoolClass.objects.get(
+            applied_class = SchoolSupportedClasses.objects.get(
                 pk=student_data['current_class_id']
             )
-        except SchoolClass.DoesNotExist:
+        except SchoolSupportedClasses.DoesNotExist:
             pass
 
     if request.method == 'GET':

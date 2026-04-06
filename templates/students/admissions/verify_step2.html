@@ -50,51 +50,60 @@
               {% if errors.student_id %}<div class="invalid-feedback">{{ errors.student_id }}</div>{% endif %}
             </div>
 
-            <div class="col-12 col-sm-6">
-              <label class="form-label fw-700 small">Class to Enrol Into <span class="text-danger">*</span></label>
-              <select name="current_class" class="form-select {% if errors.current_class %}is-invalid{% endif %}">
-                <option value="">— Select class —</option>
-                <optgroup label="Nursery">
-                  {% for cls in all_classes %}{% if cls.section == 'nursery' %}
-                  <option value="{{ cls.pk }}"
-                    {% if post.current_class == cls.pk|stringformat:"s" %}selected
-                    {% elif admission.applied_class_id == cls.pk %}selected{% endif %}>
-                    {{ cls.display_name }}
+            
+            
+            
+            
+            
+            
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Class to Enrol Into <span class="text-danger">*</span></label>
+            <select name="current_class" class="form-select {% if errors.applied_class %}is-invalid{% endif %}">
+              <option value="">— Not specified —</option>
+              {% for cls in all_classes %}
+                {% if cls.supported_class.section == 'nursery' %}
+                  <option value="{{ cls.pk }}" 
+                    {% if post.current_class == cls.pk|stringformat:"s" %}
+                      selected
+                    {% elif admission.applied_class_id == cls.pk %}
+                        selected
+                    {% endif %}>
+                    {{ cls.supported_class.name }}
                   </option>
-                  {% endif %}{% endfor %}
-                </optgroup>
-                <optgroup label="Primary">
-                  {% for cls in all_classes %}{% if cls.section == 'primary' %}
-                  <option value="{{ cls.pk }}"
-                    {% if post.current_class == cls.pk|stringformat:"s" %}selected
-                    {% elif admission.applied_class_id == cls.pk %}selected{% endif %}>
-                    {{ cls.display_name }}
+                {% elif cls.supported_class.section == 'primary' %}
+                  <option value="{{ cls.pk }}" 
+                    {% if post.current_class == cls.pk|stringformat:"s" %}
+                      selected
+                    {% elif admission.applied_class_id == cls.pk %}
+                        selected
+                    {% endif %}>
+                      {{ cls.supported_class.name }}
                   </option>
-                  {% endif %}{% endfor %}
-                </optgroup>
-              </select>
-              {% if errors.current_class %}<div class="invalid-feedback">{{ errors.current_class }}</div>{% endif %}
-            </div>
-
-            <div class="col-12 col-sm-6">
-              <label class="form-label fw-700 small">Academic Year <span class="text-danger">*</span></label>
-              <input type="text" name="academic_year"
-                class="form-control font-monospace {% if errors.academic_year %}is-invalid{% endif %}"
-                value="{{ post.academic_year|default:current_year }}" maxlength="9"/>
-              {% if errors.academic_year %}<div class="invalid-feedback">{{ errors.academic_year }}</div>{% endif %}
-            </div>
-
-            <div class="col-12 col-sm-6">
-              <label class="form-label fw-700 small">Date Enrolled <span class="text-danger">*</span></label>
-              <input type="date" name="date_enrolled"
-                class="form-control {% if errors.date_enrolled %}is-invalid{% endif %}"
-                value="{{ post.date_enrolled|default:today_str }}" max="{{ today_str }}"/>
-              {% if errors.date_enrolled %}<div class="invalid-feedback">{{ errors.date_enrolled }}</div>{% endif %}
-            </div>
-
+                {% endif %}
+              {% endfor %}
+            </select>
+            {% if errors.applied_class %}<div class="invalid-feedback">{{ errors.applied_class }}</div>{% endif %}
           </div>
+            
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Academic Year <span class="text-danger">*</span></label>
+            <input type="text" name="academic_year"
+              class="form-control font-monospace {% if errors.academic_year %}is-invalid{% endif %}"
+              value="{{ post.academic_year|default:current_year }}" maxlength="9"/>
+            {% if errors.academic_year %}<div class="invalid-feedback">{{ errors.academic_year }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Date Enrolled <span class="text-danger">*</span></label>
+            <input type="date" name="date_enrolled"
+              class="form-control {% if errors.date_enrolled %}is-invalid{% endif %}"
+              value="{{ post.date_enrolled|default:today_str }}" max="{{ today_str }}"/>
+            {% if errors.date_enrolled %}<div class="invalid-feedback">{{ errors.date_enrolled }}</div>{% endif %}
+          </div>
+
         </div>
       </div>
+    </div>
 
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary px-4">
@@ -117,7 +126,7 @@
           <dt class="col-5 fw-700">Gender</dt>
           <dd class="col-7">{{ admission.get_gender_display }}</dd>
           <dt class="col-5 fw-700">Applying for</dt>
-          <dd class="col-7">{{ admission.applied_class.display_name|default:"—" }}</dd>
+          <dd class="col-7">{{ admission.applied_class.supported_class.name|default:"—" }}</dd>
         </dl>
       </div>
     </div>

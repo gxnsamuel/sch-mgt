@@ -197,7 +197,7 @@ def validate_direct_student_step(post: dict) -> tuple[dict, dict]:
         post.get('date_enrolled', ''), 'Date enrolled', errors, required=True
     )
     if date_enrolled:
-        cleaned['date_enrolled'] = date_enrolled
+        cleaned['date_enrolled'] = date_enrolled.isoformat()
 
     # ── Previous school ───────────────────────────────────────────────────────
     cleaned['previous_school'] = (post.get('previous_school') or '').strip()
@@ -333,7 +333,7 @@ def get_student_detail_stats(student) -> dict:
     )
 
     # ── Fees: structure ───────────────────────────────────────────────────────
-    fee_stats     = get_student_fees_summary(student)
+    # fee_stats     = get_student_fees_summary(student)
 
     # ── Assessments ───────────────────────────────────────────────────────────
     assessment_stats = get_student_assessment_summary(student)
@@ -355,7 +355,7 @@ def get_student_detail_stats(student) -> dict:
         'age':               age,
         'today':             today,
         'admission':         admission,
-        **fee_stats,
+        # **fee_stats,
         **assessment_stats,
         'recent_payments':   recent_payments,
     }
