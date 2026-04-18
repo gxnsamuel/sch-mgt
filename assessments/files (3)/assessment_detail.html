@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+
+{% block title %}{{ assessment.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">{{ assessment.title|truncatechars:40 }}</li>
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════════════
+   PAGE HEADER
+══════════════════════════════════════════════════════════════════ #}
+<div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
+
+  <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+      <h4 class="fw-bold mb-0">{{ assessment.title }}</h4>
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+        {{ assessment.get_assessment_type_display }}
+      </span>
+      {% if assessment.is_published %}
+      <span class="badge bg-success-subtle text-success border border-success-subtle">
+        <i class="bi bi-eye me-1"></i>Published
+      </span>
+      {% else %}
+      <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+        <i class="bi bi-pencil me-1"></i>Draft
+      </span>
+      {% endif %}
+      {% if assessment.results_published %}
+      <span class="badge bg-info-subtle text-info border border-info-subtle">
+        <i class="bi bi-send me-1"></i>Results Out
+      </span>
+      {% endif %}
+    </div>
+    <div class="text-muted small d-flex gap-3 flex-wrap mt-1">
+      <span><i class="bi bi-calendar3 me-1"></i>{{ assessment.date_given|date:"d M Y" }}</span>
+      <span><i class="bi bi-journal me-1"></i>{{ assessment.term }}</span>
+      {% if assessment.month %}
+      <span><i class="bi bi-calendar-month me-1"></i>{{ assessment.get_month_display }}</span>
+      {% endif %}
+      {% if assessment.date_due %}
+      <span><i class="bi bi-calendar-check me-1"></i>Due {{ assessment.date_due|date:"d M Y" }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Action buttons #}
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+
+    <a href="{% url 'assessments:edit' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+
+    {% if not assessment.is_published %}
+    <form method="post" action="{% url 'assessments:change_status' assessment.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button name="action" value="publish" type="submit" class="btn btn-sm btn-success">
+        <i class="bi bi-check-circle me-1"></i>Publish
+      </button>
+    </form>
+    {% else %}
+    <form method="post" action="{% url 'assessments:change_status' assessment.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button name="action" value="unpublish" type="submit" class="btn btn-sm btn-outline-warning">
+        <i class="bi bi-eye-slash me-1"></i>Unpublish
+      </button>
+    </form>
+    {% endif %}
+
+    {% if assessment.is_published and not assessment.results_published %}
+    <form method="post" action="{% url 'assessments:change_status' assessment.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button name="action" value="release_results" type="submit" class="btn btn-sm btn-info">
+        <i class="bi bi-send me-1"></i>Release Results
+      </button>
+    </form>
+    {% elif assessment.results_published %}
+    <form method="post" action="{% url 'assessments:change_status' assessment.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button name="action" value="hide_results" type="submit" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-eye-slash me-1"></i>Hide Results
+      </button>
+    </form>
+    {% endif %}
+
+    <a href="{% url 'assessments:delete' assessment.pk %}"
+       class="btn btn-sm btn-outline-danger"
+       title="Delete assessment">
+      <i class="bi bi-trash"></i>
+    </a>
+
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════
+   PERFORMANCE SUMMARY STATS
+══════════════════════════════════════════════════════════════════ #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="card border-0 bg-body-secondary h-100 text-center py-3">
+      <div class="fs-4 fw-bold text-dark">{{ classes|length }}</div>
+      <div class="small text-muted">Classes</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="card border-0 bg-body-secondary h-100 text-center py-3">
+      <div class="fs-4 fw-bold text-primary">{{ subjects|length }}</div>
+      <div class="small text-muted">Subjects</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="card border-0 bg-body-secondary h-100 text-center py-3">
+      <div class="fs-4 fw-bold text-secondary">{{ teachers|length }}</div>
+      <div class="small text-muted">Teachers</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="card border-0 bg-body-secondary h-100 text-center py-3">
+      <div class="fs-4 fw-bold text-dark">{{ summary.total|default:"0" }}</div>
+      <div class="small text-muted">Entries</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="card border-0 bg-success-subtle h-100 text-center py-3">
+      <div class="fs-4 fw-bold text-success">{{ summary.passed|default:"0" }}</div>
+      <div class="small text-muted">Passed</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="card border-0 bg-body-secondary h-100 text-center py-3">
+      <div class="fs-4 fw-bold text-info">
+        {% if summary.pass_rate %}{{ summary.pass_rate }}%{% else %}—{% endif %}
+      </div>
+      <div class="small text-muted">Pass Rate</div>
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════
+   ASSESSMENT INFO CARD
+══════════════════════════════════════════════════════════════════ #}
+<div class="card border mb-4">
+  <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2">
+    <span class="fw-semibold small text-uppercase text-muted tracking-wide">
+      <i class="bi bi-info-circle me-1"></i>Assessment Info
+    </span>
+  </div>
+  <div class="card-body py-3">
+    <div class="row g-3 small">
+
+      <div class="col-6 col-md-3">
+        <div class="text-muted mb-1">Term</div>
+        <div class="fw-semibold">{{ assessment.term }}</div>
+      </div>
+
+      {% if assessment.term.academic_year %}
+      <div class="col-6 col-md-3">
+        <div class="text-muted mb-1">Academic Year</div>
+        <div class="fw-semibold">{{ assessment.term.academic_year }}</div>
+      </div>
+      {% endif %}
+
+      <div class="col-6 col-md-3">
+        <div class="text-muted mb-1">Date Given</div>
+        <div class="fw-semibold">{{ assessment.date_given|date:"d M Y" }}</div>
+      </div>
+
+      {% if assessment.date_due %}
+      <div class="col-6 col-md-3">
+        <div class="text-muted mb-1">Due Date</div>
+        <div class="fw-semibold">{{ assessment.date_due|date:"d M Y" }}</div>
+      </div>
+      {% endif %}
+
+      {% if assessment.date_results_released %}
+      <div class="col-6 col-md-3">
+        <div class="text-muted mb-1">Results Released</div>
+        <div class="fw-semibold">{{ assessment.date_results_released|date:"d M Y" }}</div>
+      </div>
+      {% endif %}
+
+      {% if assessment.created_by %}
+      <div class="col-6 col-md-3">
+        <div class="text-muted mb-1">Created By</div>
+        <div class="fw-semibold">{{ assessment.created_by.get_full_name|default:assessment.created_by.username }}</div>
+      </div>
+      {% endif %}
+
+      <div class="col-6 col-md-3">
+        <div class="text-muted mb-1">Created</div>
+        <div class="fw-semibold">{{ assessment.created_at|date:"d M Y" }}</div>
+      </div>
+
+      {% if assessment.description %}
+      <div class="col-12">
+        <div class="text-muted mb-1">Description</div>
+        <div>{{ assessment.description }}</div>
+      </div>
+      {% endif %}
+
+      {% if assessment.notes %}
+      <div class="col-12">
+        <div class="text-muted mb-1">Internal Notes</div>
+        <div class="text-secondary fst-italic">{{ assessment.notes }}</div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════
+   CLASSES
+══════════════════════════════════════════════════════════════════ #}
+<div class="card border mb-4">
+  <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2">
+    <span class="fw-semibold small text-uppercase text-muted">
+      <i class="bi bi-building me-1"></i>Classes
+      {% if classes %}
+      <span class="badge bg-secondary ms-1 fw-normal">{{ classes|length }}</span>
+      {% endif %}
+    </span>
+    <a href="{% url 'assessments:add_class' assessment.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2">
+      <i class="bi bi-plus-lg me-1"></i>Configure
+    </a>
+  </div>
+
+  {% if classes %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Class</th>
+          <th>Section</th>
+          <th class="text-center">Students Attended</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ac in classes %}
+        <tr>
+          <td class="ps-3 fw-semibold">
+            <i class="bi bi-mortarboard me-1 text-muted"></i>
+            {{ ac.school_class.supported_class.name }}
+          </td>
+          <td>
+            <span class="badge
+              {% if ac.school_class.supported_class.section == 'nursery' %}bg-warning-subtle text-warning border border-warning-subtle
+              {% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %}">
+              {{ ac.school_class.supported_class.get_section_display }}
+            </span>
+          </td>
+          <td class="text-center">
+            {% if ac.students_attended %}
+            <span class="fw-bold">{{ ac.students_attended }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center py-4 text-muted">
+    <i class="bi bi-building fs-3 d-block mb-2 opacity-25"></i>
+    <div class="small">No classes configured yet.</div>
+    <a href="{% url 'assessments:add_class' assessment.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+      <i class="bi bi-plus-lg me-1"></i>Add Classes
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════
+   SUBJECTS
+══════════════════════════════════════════════════════════════════ #}
+<div class="card border mb-4">
+  <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2">
+    <span class="fw-semibold small text-uppercase text-muted">
+      <i class="bi bi-journal-bookmark me-1"></i>Subjects
+      {% if subjects %}
+      <span class="badge bg-secondary ms-1 fw-normal">{{ subjects|length }}</span>
+      {% endif %}
+    </span>
+    <a href="{% url 'assessments:add_subject' assessment.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2">
+      <i class="bi bi-plus-lg me-1"></i>Add Subjects
+    </a>
+  </div>
+
+  {% if subjects %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Subject</th>
+          <th class="text-center">Pass Mark</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for asub in subjects %}
+        <tr>
+          <td class="ps-3">
+            <span class="badge bg-dark font-monospace me-1">{{ asub.subject.code }}</span>
+            <span class="fw-semibold">{{ asub.subject.name }}</span>
+          </td>
+          <td class="text-center">
+            {% if asub.passmark %}
+            <span class="fw-bold text-success">{{ asub.passmark }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ asub.notes|default:"—"|truncatechars:60 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center py-4 text-muted">
+    <i class="bi bi-journal-x fs-3 d-block mb-2 opacity-25"></i>
+    <div class="small">No subjects linked yet.</div>
+    <a href="{% url 'assessments:add_subject' assessment.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+      <i class="bi bi-plus-lg me-1"></i>Add Subjects
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════
+   TEACHERS
+══════════════════════════════════════════════════════════════════ #}
+<div class="card border mb-4">
+  <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2">
+    <span class="fw-semibold small text-uppercase text-muted">
+      <i class="bi bi-person-workspace me-1"></i>Teachers
+      {% if teachers %}
+      <span class="badge bg-secondary ms-1 fw-normal">{{ teachers|length }}</span>
+      {% endif %}
+    </span>
+    <a href="{% url 'assessments:add_teacher' assessment.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2">
+      <i class="bi bi-plus-lg me-1"></i>Assign Teachers
+    </a>
+  </div>
+
+  {% if teachers %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Teacher</th>
+          <th>Username</th>
+          <th>Subject</th>
+          <th>Class</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for at in teachers %}
+        <tr>
+          <td class="ps-3 fw-semibold">
+            <i class="bi bi-person-circle me-1 text-muted"></i>
+            {{ at.teacher.get_full_name|default:at.teacher.username }}
+          </td>
+          <td class="text-muted font-monospace">{{ at.teacher.username }}</td>
+          <td>
+            {% if at.subject %}
+            <span class="badge bg-dark font-monospace me-1">{{ at.subject.code }}</span>
+            {{ at.subject.name }}
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if at.school_class %}
+            {{ at.school_class.name }}
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center py-4 text-muted">
+    <i class="bi bi-person-dash fs-3 d-block mb-2 opacity-25"></i>
+    <div class="small">No teachers assigned yet.</div>
+    <a href="{% url 'assessments:add_teacher' assessment.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+      <i class="bi bi-plus-lg me-1"></i>Assign Teachers
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════
+   PERFORMANCE RECORDS
+══════════════════════════════════════════════════════════════════ #}
+<div class="card border mb-4">
+  <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2 flex-wrap gap-2">
+    <span class="fw-semibold small text-uppercase text-muted">
+      <i class="bi bi-clipboard-data me-1"></i>Student Performance
+      {% if performances %}
+      <span class="badge bg-secondary ms-1 fw-normal">{{ performances|length }}</span>
+      {% endif %}
+    </span>
+    <a href="{% url 'assessments:add_performance' assessment.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2">
+      <i class="bi bi-plus-lg me-1"></i>Enter Marks
+    </a>
+  </div>
+
+  {% if performances %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Student</th>
+          <th>Class</th>
+          <th>Subject</th>
+          <th class="text-center">Marks</th>
+          <th class="text-center">Verified</th>
+          <th>Comment</th>
+          <th class="text-end pe-3">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for perf in performances %}
+        <tr>
+          <td class="ps-3 fw-semibold">
+            {{ perf.student.last_name }}, {{ perf.student.first_name }}
+            <div class="text-muted fw-normal font-monospace" style="font-size:0.75rem;">
+              {{ perf.student.student_id }}
+            </div>
+          </td>
+          <td>{{ perf.school_class }}</td>
+          <td>
+            <span class="badge bg-dark font-monospace">{{ perf.subject.code }}</span>
+          </td>
+          <td class="text-center font-monospace fw-bold">
+            {% if perf.marks_obtained is not None %}
+              {{ perf.marks_obtained }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if perf.is_verified %}
+            <i class="bi bi-patch-check-fill text-success" title="Verified"></i>
+            {% else %}
+            <i class="bi bi-circle text-muted opacity-50" title="Not verified"></i>
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ perf.comment|default:"—"|truncatechars:50 }}</td>
+          <td class="text-end pe-3">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'assessments:performance_detail' assessment.pk perf.pk %}"
+                 class="btn btn-sm btn-outline-secondary py-0 px-2" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'assessments:edit_performance' assessment.pk perf.pk %}"
+                 class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'assessments:delete_performance' assessment.pk perf.pk %}"
+                 class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center py-4 text-muted">
+    <i class="bi bi-clipboard-x fs-3 d-block mb-2 opacity-25"></i>
+    <div class="small">No performance records yet.</div>
+    <a href="{% url 'assessments:add_performance' assessment.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+      <i class="bi bi-plus-lg me-1"></i>Enter Marks
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════
+   PAGE FOOTER META
+══════════════════════════════════════════════════════════════════ #}
+<div class="text-muted small d-flex gap-4 flex-wrap mt-1 pb-2 border-top pt-3">
+  {% if assessment.created_by %}
+  <span>
+    <i class="bi bi-person me-1"></i>
+    Created by {{ assessment.created_by.get_full_name|default:assessment.created_by.username }}
+  </span>
+  {% endif %}
+  <span>
+    <i class="bi bi-calendar-plus me-1"></i>{{ assessment.created_at|date:"d M Y, H:i" }}
+  </span>
+  {% if assessment.updated_at %}
+  <span>
+    <i class="bi bi-pencil me-1"></i>Updated {{ assessment.updated_at|date:"d M Y, H:i" }}
+  </span>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -13,7 +13,7 @@ from django.db import models
 
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
-from academics.models import SchoolStream, SchoolSupportedClasses
+from academics.models import SchoolStream, SchoolSupportedClasses,AcademicYear
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -78,6 +78,7 @@ class Student(TimeStampedModel):
                          null=True,
                          related_name='students',
                      )
+    
     
     school_stream = models.ForeignKey(
                         SchoolStream, on_delete=models.CASCADE,
@@ -413,11 +414,17 @@ class Admission(TimeStampedModel):
 
 class StudentClassPromotion(TimeStampedModel):
     student = models.ForeignKey(Student, related_name='student_class_promotion', on_delete=models.CASCADE)
-    from_class = models.ForeignKey(SchoolSupportedClasses, related_name='student_class_promotion_from', on_delete=models.CASCADE)
-    to_class = models.ForeignKey(SchoolSupportedClasses, related_name='student_class_promotion_to', on_delete=models.CASCADE)
-    from_year =models.CharField(max_length=5)
-    year_year =models.CharField(max_length=5)
-    is_to_class_the_current = models.BooleanField(default=False)
+    previous_class = models.ForeignKey(SchoolSupportedClasses, related_name='student_class_previous_class', on_delete=models.CASCADE, null=True,blank=True)
+    current_class = models.ForeignKey(SchoolSupportedClasses, related_name='student_class_current_class', on_delete=models.CASCADE,  null=True,blank=True)
+    upcoming_class = models.ForeignKey(SchoolSupportedClasses, related_name='student_class_upcoming_class', on_delete=models.CASCADE,  null=True,blank=True)
+    academic_year = models.ForeignKey(AcademicYear, related_name='class_promotion_academic_year', on_delete=models.CASCADE, )
+    has_promoted =models.BooleanField(default=False)
+    has_repeated =models.BooleanField(default=False)
+    is_initial_class =models.BooleanField(default=False)
 
+    is_active = models.BooleanField(default=False)
+
+    
     def __str__(self):
         return self.student.student_id
+    

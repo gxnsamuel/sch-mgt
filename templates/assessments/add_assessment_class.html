@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load assessments_extras %}
+
+{% block title %}Assign Classes — {{ assessment.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="text-secondary">
+    {{ assessment.title|truncatechars:30 }}
+  </a>
+</li>
+<li class="breadcrumb-item active">Assign Classes</li>
+{% endblock %}
+
+{% block content %}
+
+{% include "assessments/_step_indicator.html" with step=1 assessment=assessment %}
+
+<div class="d-flex align-items-start justify-content-between mb-4 gap-2 flex-wrap">
+  <div>
+    <h4 class="fw-bold mb-1">Step 1 — Assign Classes</h4>
+    <p class="text-muted small mb-0">
+      Select which classes will sit <strong>{{ assessment.title }}</strong> and
+      enter the number of students that attended.
+    </p>
+  </div>
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+
+{# Already linked classes #}
+{% if existing_classes %}
+<div class="card border mb-4">
+  <div class="card-header bg-transparent py-2">
+    <span class="fw-semibold small text-muted text-uppercase">
+      <i class="bi bi-check2-circle me-1 text-success"></i>Already Linked Classes
+    </span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Class</th>
+          <th>Section</th>
+          <th class="text-center">Students Attended</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ac in existing_classes %}
+        <tr>
+          <td class="ps-3 fw-semibold">{{ ac.school_class.supported_class.name }}</td>
+          <td>
+            <span class="badge
+              {% if ac.school_class.supported_class.section == 'nursery' %}bg-warning-subtle text-warning border border-warning-subtle
+              {% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %}">
+              {{ ac.school_class.supported_class.get_section_display }}
+            </span>
+          </td>
+          <td class="text-center fw-bold">{{ ac.students_attended|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+
+{# Add more classes form #}
+{% if available_classes %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="card border mb-4">
+    <div class="card-header bg-transparent py-2">
+      <span class="fw-semibold small text-muted text-uppercase">
+        <i class="bi bi-building me-1"></i>Available Classes
+      </span>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+
+
+        {% for sc in available_classes %}
+          {% with key=sc.supported_class.key|lower %}
+
+          <div class="col-12 col-sm-6 col-md-4">
+            <div class="border rounded p-3 h-100">
+
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox"
+                      id="class_{{ key }}"
+                      name="class_{{ key }}"
+                      value="{{ sc.pk }}">
+                <label class="form-check-label fw-semibold" for="class_{{ key }}">
+                  {{ sc.supported_class.name }}
+                  <span class="badge
+                    {% if sc.supported_class.section == 'nursery' %}bg-warning-subtle text-warning border border-warning-subtle
+                    {% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %} ms-1">
+                    {{ sc.supported_class.get_section_display }}
+                  </span>
+                </label>
+              </div>
+
+              {# Always visible — no hiding #}
+              <label class="form-label small text-muted mb-1">
+                Students Attended <span class="text-danger">*</span>
+              </label>
+              <input type="number"
+                    name="attended_{{ key }}"
+                    id="attended_{{ key }}"
+                    class="form-control form-control-sm"
+                    min="0"
+                    placeholder="e.g. 42">
+
+            </div>
+          </div>
+
+          {% endwith %}
+        {% endfor %}
+
+
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-check-lg me-1"></i>Save &amp; Continue to Subjects
+    </button>
+    <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary">
+      Cancel
+    </a>
+  </div>
+
+</form>
+
+{% else %}
+<div class="alert alert-success d-flex align-items-center gap-2">
+  <i class="bi bi-check-circle-fill fs-5"></i>
+  <div>
+    All supported classes are already linked to this assessment.
+    <a href="{% url 'assessments:add_subject' assessment.pk %}" class="fw-semibold ms-1">
+      Continue to Step 2 →
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.class-check').forEach(function (cb) {
+    function toggle() {
+      var wrap = document.getElementById(cb.dataset.target + '_wrap');
+      if (wrap) {
+        wrap.style.display = cb.checked ? '' : 'none';
+        var inp = document.getElementById(cb.dataset.target);
+        if (inp) inp.required = cb.checked;
+      }
+    }
+    cb.addEventListener('change', toggle);
+    toggle();
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load assessments_extras %}
+
+{% block title %}Assign Subjects — {{ assessment.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="text-secondary">
+    {{ assessment.title|truncatechars:30 }}
+  </a>
+</li>
+<li class="breadcrumb-item active">Assign Subjects</li>
+{% endblock %}
+
+{% block content %}
+
+{% include "assessments/_step_indicator.html" with step=2 assessment=assessment %}
+
+<div class="d-flex align-items-start justify-content-between mb-4 gap-2 flex-wrap">
+  <div>
+    <h4 class="fw-bold mb-1">Step 2 — Assign Subjects</h4>
+    <p class="text-muted small mb-0">
+      Select the subjects being assessed per class and set a pass mark for each.
+    </p>
+  </div>
+  <a href="{% url 'assessments:add_class' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Classes
+  </a>
+</div>
+
+
+{# Already linked subjects #}
+{% if existing_subjects %}
+<div class="card border mb-4">
+  <div class="card-header bg-transparent py-2">
+    <span class="fw-semibold small text-muted text-uppercase">
+      <i class="bi bi-check2-circle me-1 text-success"></i>Already Linked Subjects
+    </span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Subject</th>
+          <th class="text-center">Pass Mark</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for asub in existing_subjects %}
+        <tr>
+          <td class="ps-3">
+            <span class="badge bg-dark font-monospace me-1">{{ asub.subject.code }}</span>
+            <span class="fw-semibold">{{ asub.subject.name }}</span>
+          </td>
+          <td class="text-center fw-bold">{{ asub.passmark|default:"—" }}</td>
+          <td class="text-muted">{{ asub.notes|default:"—"|truncatechars:50 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+
+{# Subject selection grouped by class #}
+{% if class_subject_groups %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% for group in class_subject_groups %}
+  {% if group.subjects %}
+  <div class="card border mb-3">
+    <div class="card-header bg-transparent py-2 d-flex align-items-center gap-2">
+      <i class="bi bi-mortarboard text-primary"></i>
+      <span class="fw-semibold">{{ group.ac.school_class.supported_class.name }}</span>
+      <span class="badge
+        {% if group.ac.school_class.supported_class.section == 'nursery' %}bg-warning-subtle text-warning border border-warning-subtle
+        {% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %}">
+        {{ group.ac.school_class.supported_class.get_section_display }}
+      </span>
+      <span class="text-muted small ms-auto">{{ group.subjects|length }} available</span>
+    </div>
+    <div class="card-body py-3">
+      <div class="row g-3">
+
+        {% for cs in group.subjects %}
+        {% with class_key=group.ac.school_class.supported_class.key|lower %}
+        {% with code=cs.subject.code|lower %}
+        {% with slot_key=class_key|add:"_"|add:code %}
+
+        {% dict_get post 'subject_' slot_key as subject_checked %}
+        {% dict_get post 'passmark_' slot_key as passmark_val %}
+        {% dict_get post 'notes_' slot_key as notes_val %}
+        {% dict_get errors 'passmark_' slot_key as passmark_error %}
+
+        <div class="col-12 col-md-6">
+  <div class="border rounded p-3 h-100 {% if passmark_error %}border-danger{% endif %}
+    {% if cs.subject.pk|is_in:already_linked_subject_pks %}bg-light{% endif %}">
+
+    {# Subject name header — no checkbox #}
+    <div class="mb-3">
+      <span class="badge bg-dark font-monospace me-1">{{ cs.subject.code }}</span>
+      <span class="fw-semibold">{{ cs.subject.name }}</span>
+      {% if cs.subject.pk|is_in:already_linked_subject_pks %}
+      <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">
+        <i class="bi bi-check"></i> Saved
+      </span>
+      {% endif %}
+    </div>
+
+    {% if cs.subject.pk|is_in:already_linked_subject_pks %}
+      {% for asub in existing_subjects %}
+        {% if asub.subject_id == cs.subject.pk %}
+        <div class="small text-muted">
+          Pass Mark: <strong class="text-dark">{{ asub.passmark }}</strong>
+          {% if asub.notes %}<span class="ms-2">· {{ asub.notes }}</span>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="row g-2">
+        <div class="col-6">
+          <label class="form-label small text-muted mb-1">
+            Pass Mark <span class="text-danger">*</span>
+          </label>
+          <input type="number"
+                 name="passmark_{{ slot_key }}"
+                 class="form-control form-control-sm {% if passmark_error %}is-invalid{% endif %}"
+                 value="{{ passmark_val|default:'' }}"
+                 min="0" step="0.5" placeholder="e.g. 50">
+          {% if passmark_error %}
+          <div class="invalid-feedback">{{ passmark_error }}</div>
+          {% endif %}
+        </div>
+        <div class="col-12">
+          <label class="form-label small text-muted mb-1">Notes <span class="text-muted small">(optional)</span></label>
+          <input type="text"
+                 name="notes_{{ slot_key }}"
+                 class="form-control form-control-sm"
+                 value="{{ notes_val|default:'' }}"
+                 maxlength="200"
+                 placeholder="Optional note">
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+
+        {% endwith %}
+        {% endwith %}
+        {% endwith %}
+        {% endfor %}
+
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  <div class="d-flex gap-2 mt-2">
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-check-lg me-1"></i>Save &amp; Continue to Total Marks
+    </button>
+    <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary">
+      Cancel
+    </a>
+  </div>
+
+</form>
+
+{% else %}
+<div class="alert alert-success d-flex align-items-center gap-2">
+  <i class="bi bi-check-circle-fill fs-5"></i>
+  <div>
+    All available subjects are already linked.
+    <a href="{% url 'assessments:add_total_marks' assessment.pk %}" class="fw-semibold ms-1">
+      Continue to Step 3 →
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -4,7 +4,7 @@ from .models import (
     MONTH_CHOICES,
     AssessmentClass,
     AssessmentTeacher,
-    AssessmentPassMark,
+    # AssessmentPassMark,
     AssessmentPerformance,
 )
 
@@ -15,10 +15,10 @@ from .models import (
 VALID_ASSESSMENT_TYPES = [c[0] for c in ASSESSMENT_TYPE_CHOICES]
 VALID_MONTHS           = [c[0] for c in MONTH_CHOICES]
 VALID_VENUE_CHOICES    = [c[0] for c in AssessmentClass.VENUE_CHOICES]
-VALID_TEACHER_ROLES    = [c[0] for c in AssessmentTeacher.ROLE_CHOICES]
-VALID_PASS_TYPES       = [c[0] for c in AssessmentPassMark.PASS_TYPE_CHOICES]
-VALID_GRADES           = [c[0] for c in AssessmentPerformance.GRADE_CHOICES]
-VALID_NURSERY_RATINGS  = [c[0] for c in AssessmentPerformance.NURSERY_RATING_CHOICES]
+# VALID_TEACHER_ROLES    = [c[0] for c in AssessmentTeacher.ROLE_CHOICES]
+# VALID_PASS_TYPES       = [c[0] for c in AssessmentPassMark.PASS_TYPE_CHOICES]
+# VALID_GRADES           = [c[0] for c in AssessmentPerformance.GRADE_CHOICES]
+# VALID_NURSERY_RATINGS  = [c[0] for c in AssessmentPerformance.NURSERY_RATING_CHOICES]
 
 ALLOWED_FILE_EXTENSIONS = {'.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.webp'}
 MAX_FILE_MB = 10
@@ -242,6 +242,153 @@ def validate_assessment(data, files=None):
     return errors, cleaned
 
 
+
+
+
+
+
+
+
+
+
+
+import calendar
+from datetime import datetime
+
+def is_month_in_range(start_str, end_str, month_name, fmt="%m/%d/%Y"):
+    start = datetime.strptime(start_str, fmt)
+    end = datetime.strptime(end_str, fmt)
+    if end < start:
+        start, end = end, start  # optional: swap if order is reversed
+
+    # FIX 3: month_name may be a numeric string (e.g. "3") coming from MONTH_CHOICES
+    # integer keys — handle that before trying name/abbr lookup
+    month_name = str(month_name).strip().title()
+    try:
+        numeric = int(month_name)
+        if not 1 <= numeric <= 12:
+            return False
+        target = numeric
+    except ValueError:
+        try:
+            target = list(calendar.month_name).index(month_name)  # full name
+        except ValueError:
+            target = list(calendar.month_abbr).index(month_name)  # abbr
+
+    y, m = start.year, start.month
+    while (y < end.year) or (y == end.year and m <= end.month):
+        if m == target:
+            return True
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    return False
+
+
+def is_range_overlaps_year(start_str, end_str, year, fmt="%m/%d/%Y", require_full_range=False):
+    # FIX 4: removed redundant `from datetime import datetime` — already imported at module level
+    start = datetime.strptime(start_str, fmt)
+    end = datetime.strptime(end_str, fmt)
+    if end < start:
+        start, end = end, start
+
+    year_start = datetime(year, 1, 1)
+    year_end = datetime(year, 12, 31, 23, 59, 59)
+
+    if require_full_range:
+        # whole range must be inside the year
+        return start >= year_start and end <= year_end
+    else:
+        # any overlap between the two intervals
+        return not (end < year_start or start > year_end)
+
+# Examples
+# print(range_overlaps_year("03/15/2025", "07/15/2025", 2026))            # False
+# print(range_overlaps_year("11/01/2025", "02/10/2026", 2026))            # True (overlaps 2026)
+# print(range_overlaps_year("01/05/2026", "12/20/2026", 2026, require_full_range=True))  # True
+
+
+
+def period_range_check(provided_start, provided_end, general_start, general_end, fmt="%Y/%m/%d", mode="full"):
+    """
+    Check whether the provided period lies inside / overlaps / partially overlaps the general period.
+    mode: "full"  -> provided range fully inside general range (inclusive)
+          "any"   -> any overlap
+          "partial" -> overlaps but not fully contained
+
+    Accepts inputs as date, datetime, or strings (tries fmt then common formats). Lists/tuples take first element.
+    Returns boolean.
+    """
+    from datetime import datetime, date
+
+    def _parse_to_date(val):
+        # normalize container input
+        if isinstance(val, (list, tuple)):
+            val = val[0] if val else None
+        if val is None:
+            raise ValueError("Empty date value")
+        if isinstance(val, date) and not isinstance(val, datetime):
+            return val
+        if isinstance(val, datetime):
+            return val.date()
+        if not isinstance(val, str):
+            raise TypeError(f"Unsupported date value: {type(val)}")
+
+        # try provided fmt first
+        tries = [fmt, "%Y/%m/%d", "%m/%d/%Y", "%d/%m/%Y"]
+        for tf in tries:
+            try:
+                return datetime.strptime(val, tf).date()
+            except Exception:
+                pass
+        # last resorts
+        try:
+            return datetime.fromisoformat(val).date()
+        except Exception:
+            try:
+                from dateutil import parser
+                return parser.parse(val).date()
+            except Exception:
+                raise ValueError(f"Unrecognized date string: {val!r}")
+
+    p0 = _parse_to_date(provided_start)
+    p1 = _parse_to_date(provided_end)
+    g0 = _parse_to_date(general_start)
+    g1 = _parse_to_date(general_end)
+
+    # normalize order
+    if p1 < p0:
+        p0, p1 = p1, p0
+    if g1 < g0:
+        g0, g1 = g1, g0
+
+    if mode == "full":
+        return (p0 >= g0) and (p1 <= g1)
+    if mode == "any":
+        return not (p1 < g0 or p0 > g1)
+    if mode == "partial":
+        return (not (p1 < g0 or p0 > g1)) and not ((p0 >= g0) and (p1 <= g1))
+    raise ValueError("mode must be 'full', 'any' or 'partial'")
+
+# Examples
+# period_range_check("03/15/2025","07/15/2025","02/10/2025","06/14/2025","%m/%d/%Y","full")   -> False
+# period_range_check("03/15/2025","07/15/2025","02/10/2025","06/14/2025","%m/%d/%Y","any")    -> True
+# period_range_check("03/15/2025","07/15/2025","02/10/2025","06/14/2025","%m/%d/%Y","partial")-> True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Validate AssessmentClass
 # ─────────────────────────────────────────────────────────────────────────────
@@ -346,183 +493,183 @@ def validate_assessment_subject(data, files=None, assessment=None):
 # 4. Validate AssessmentTeacher
 # ─────────────────────────────────────────────────────────────────────────────
 
-def validate_assessment_teacher(data, assessment):
-    from accounts.models  import Teacher
-    from academics.models import Subject, SchoolClass
+# def validate_assessment_teacher(data, assessment):
+#     from accounts.models  import Teacher
+#     from academics.models import Subject, SchoolClass
 
-    errors  = {}
-    cleaned = {}
+#     errors  = {}
+#     cleaned = {}
 
-    teacher = _resolve_fk(Teacher, data.get('teacher'), 'teacher', errors, 'Teacher')
-    if teacher:
-        cleaned['teacher'] = teacher
+#     teacher = _resolve_fk(Teacher, data.get('teacher'), 'teacher', errors, 'Teacher')
+#     if teacher:
+#         cleaned['teacher'] = teacher
 
-    role = data.get('role', '').strip()
-    if not role:
-        errors['role'] = 'Role is required.'
-    elif role not in VALID_TEACHER_ROLES:
-        errors['role'] = 'Invalid role selected.'
-    else:
-        cleaned['role'] = role
+#     role = data.get('role', '').strip()
+#     if not role:
+#         errors['role'] = 'Role is required.'
+#     elif role not in VALID_TEACHER_ROLES:
+#         errors['role'] = 'Invalid role selected.'
+#     else:
+#         cleaned['role'] = role
 
-    # unique_together: assessment + teacher + role
-    if teacher and role:
-        if AssessmentTeacher.objects.filter(
-                assessment=assessment, teacher=teacher, role=role).exists():
-            errors['role'] = (
-                'This teacher already has this role in the assessment.'
-            )
+#     # unique_together: assessment + teacher + role
+#     if teacher and role:
+#         if AssessmentTeacher.objects.filter(
+#                 assessment=assessment, teacher=teacher, role=role).exists():
+#             errors['role'] = (
+#                 'This teacher already has this role in the assessment.'
+#             )
 
-    subj_pk = data.get('subject', '').strip()
-    if subj_pk:
-        subj = _resolve_fk(Subject, subj_pk, 'subject', errors, 'Subject')
-        if subj:
-            cleaned['subject'] = subj
+#     subj_pk = data.get('subject', '').strip()
+#     if subj_pk:
+#         subj = _resolve_fk(Subject, subj_pk, 'subject', errors, 'Subject')
+#         if subj:
+#             cleaned['subject'] = subj
 
-    class_pk = data.get('school_class', '').strip()
-    if class_pk:
-        sc = _resolve_fk(SchoolClass, class_pk, 'school_class', errors, 'Class')
-        if sc:
-            cleaned['school_class'] = sc
+#     class_pk = data.get('school_class', '').strip()
+#     if class_pk:
+#         sc = _resolve_fk(SchoolClass, class_pk, 'school_class', errors, 'Class')
+#         if sc:
+#             cleaned['school_class'] = sc
 
-    cleaned['notes'] = data.get('notes', '').strip()[:200]
+#     cleaned['notes'] = data.get('notes', '').strip()[:200]
 
-    return errors, cleaned
+#     return errors, cleaned
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Validate AssessmentPassMark
 # ─────────────────────────────────────────────────────────────────────────────
 
-def validate_assessment_passmark(data, assessment):
-    from accounts.models  import Teacher
-    from academics.models import Subject
+# def validate_assessment_passmark(data, assessment):
+#     from accounts.models  import Teacher
+#     from academics.models import Subject
 
-    errors  = {}
-    cleaned = {}
+#     errors  = {}
+#     cleaned = {}
 
-    subject = _resolve_fk(Subject, data.get('subject'), 'subject', errors, 'Subject')
-    if subject:
-        if AssessmentPassMark.objects.filter(
-                assessment=assessment, subject=subject).exists():
-            errors['subject'] = (
-                'A passmark for this subject already exists. Edit the existing one instead.'
-            )
-        else:
-            cleaned['subject'] = subject
+#     subject = _resolve_fk(Subject, data.get('subject'), 'subject', errors, 'Subject')
+#     if subject:
+#         if AssessmentPassMark.objects.filter(
+#                 assessment=assessment, subject=subject).exists():
+#             errors['subject'] = (
+#                 'A passmark for this subject already exists. Edit the existing one instead.'
+#             )
+#         else:
+#             cleaned['subject'] = subject
 
-    pass_type = data.get('pass_type', '').strip()
-    if not pass_type:
-        errors['pass_type'] = 'Pass type is required.'
-    elif pass_type not in VALID_PASS_TYPES:
-        errors['pass_type'] = 'Invalid pass type.'
-    else:
-        cleaned['pass_type'] = pass_type
+#     pass_type = data.get('pass_type', '').strip()
+#     if not pass_type:
+#         errors['pass_type'] = 'Pass type is required.'
+#     elif pass_type not in VALID_PASS_TYPES:
+#         errors['pass_type'] = 'Invalid pass type.'
+#     else:
+#         cleaned['pass_type'] = pass_type
 
-    if pass_type == 'percentage':
-        pv = _parse_decimal(data.get('pass_value'), 'pass_value', errors,
-                            'Pass value', min_val=1, max_val=100)
-    else:
-        pv = _parse_decimal(data.get('pass_value'), 'pass_value', errors,
-                            'Pass value', min_val=1)
-    if pv is not None:
-        cleaned['pass_value'] = pv
+#     if pass_type == 'percentage':
+#         pv = _parse_decimal(data.get('pass_value'), 'pass_value', errors,
+#                             'Pass value', min_val=1, max_val=100)
+#     else:
+#         pv = _parse_decimal(data.get('pass_value'), 'pass_value', errors,
+#                             'Pass value', min_val=1)
+#     if pv is not None:
+#         cleaned['pass_value'] = pv
 
-    set_by_pk = data.get('set_by', '').strip()
-    if set_by_pk:
-        teacher = _resolve_fk(Teacher, set_by_pk, 'set_by', errors, 'Teacher')
-        if teacher:
-            cleaned['set_by'] = teacher
+#     set_by_pk = data.get('set_by', '').strip()
+#     if set_by_pk:
+#         teacher = _resolve_fk(Teacher, set_by_pk, 'set_by', errors, 'Teacher')
+#         if teacher:
+#             cleaned['set_by'] = teacher
 
-    cleaned['notes'] = data.get('notes', '').strip()[:200]
+#     cleaned['notes'] = data.get('notes', '').strip()[:200]
 
-    return errors, cleaned
+#     return errors, cleaned
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. Validate AssessmentPerformance (add / edit)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def validate_performance(data, assessment, instance=None):
-    """
-    Validates performance data for add or edit.
-    instance is provided on edit (so unique_together check skips self).
-    """
-    from students.models  import Student
-    from academics.models import Subject, SchoolClass
+# def validate_performance(data, assessment, instance=None):
+#     """
+#     Validates performance data for add or edit.
+#     instance is provided on edit (so unique_together check skips self).
+#     """
+#     from students.models  import Student
+#     from academics.models import Subject, SchoolClass
 
-    errors  = {}
-    cleaned = {}
+#     errors  = {}
+#     cleaned = {}
 
-    # ── Core FKs ─────────────────────────────────────────────────────────────
-    student = _resolve_fk(Student, data.get('student'), 'student', errors, 'Student')
-    if student:
-        cleaned['student'] = student
+#     # ── Core FKs ─────────────────────────────────────────────────────────────
+#     student = _resolve_fk(Student, data.get('student'), 'student', errors, 'Student')
+#     if student:
+#         cleaned['student'] = student
 
-    subject = _resolve_fk(Subject, data.get('subject'), 'subject', errors, 'Subject')
-    if subject:
-        cleaned['subject'] = subject
+#     subject = _resolve_fk(Subject, data.get('subject'), 'subject', errors, 'Subject')
+#     if subject:
+#         cleaned['subject'] = subject
 
-    school_class = _resolve_fk(SchoolClass, data.get('school_class'),
-                                'school_class', errors, 'Class')
-    if school_class:
-        cleaned['school_class'] = school_class
+#     school_class = _resolve_fk(SchoolClass, data.get('school_class'),
+#                                 'school_class', errors, 'Class')
+#     if school_class:
+#         cleaned['school_class'] = school_class
 
-    # unique_together: assessment + student + subject
-    if student and subject:
-        qs = AssessmentPerformance.objects.filter(
-            assessment=assessment, student=student, subject=subject
-        )
-        if instance:
-            qs = qs.exclude(pk=instance.pk)
-        if qs.exists():
-            errors['student'] = (
-                'A performance record for this student and subject already exists.'
-            )
+#     # unique_together: assessment + student + subject
+#     if student and subject:
+#         qs = AssessmentPerformance.objects.filter(
+#             assessment=assessment, student=student, subject=subject
+#         )
+#         if instance:
+#             qs = qs.exclude(pk=instance.pk)
+#         if qs.exists():
+#             errors['student'] = (
+#                 'A performance record for this student and subject already exists.'
+#             )
 
-    # ── Absence ───────────────────────────────────────────────────────────────
-    is_absent = data.get('is_absent') == 'on'
-    cleaned['is_absent'] = is_absent
-    cleaned['absent_reason'] = data.get('absent_reason', '').strip()[:200]
+#     # ── Absence ───────────────────────────────────────────────────────────────
+#     is_absent = data.get('is_absent') == 'on'
+#     cleaned['is_absent'] = is_absent
+#     cleaned['absent_reason'] = data.get('absent_reason', '').strip()[:200]
 
-    # ── Nursery vs Primary ───────────────────────────────────────────────────
-    nursery_rating = data.get('nursery_rating', '').strip()
-    if nursery_rating:
-        if nursery_rating not in VALID_NURSERY_RATINGS:
-            errors['nursery_rating'] = 'Invalid nursery rating.'
-        else:
-            cleaned['nursery_rating'] = nursery_rating
-    else:
-        cleaned['nursery_rating'] = ''
+#     # ── Nursery vs Primary ───────────────────────────────────────────────────
+#     nursery_rating = data.get('nursery_rating', '').strip()
+#     if nursery_rating:
+#         if nursery_rating not in VALID_NURSERY_RATINGS:
+#             errors['nursery_rating'] = 'Invalid nursery rating.'
+#         else:
+#             cleaned['nursery_rating'] = nursery_rating
+#     else:
+#         cleaned['nursery_rating'] = ''
 
-    # Marks (required only if not absent and no nursery rating)
-    is_nursery = bool(nursery_rating)
-    if not is_absent and not is_nursery:
-        mo = _parse_decimal(data.get('marks_obtained'), 'marks_obtained', errors,
-                            'Marks obtained', min_val=0)
-        if mo is not None:
-            cleaned['marks_obtained'] = mo
+#     # Marks (required only if not absent and no nursery rating)
+#     is_nursery = bool(nursery_rating)
+#     if not is_absent and not is_nursery:
+#         mo = _parse_decimal(data.get('marks_obtained'), 'marks_obtained', errors,
+#                             'Marks obtained', min_val=0)
+#         if mo is not None:
+#             cleaned['marks_obtained'] = mo
 
-        tm = _parse_decimal(data.get('total_marks'), 'total_marks', errors,
-                            'Total marks', min_val=1)
-        if tm is not None:
-            cleaned['total_marks'] = tm
+#         tm = _parse_decimal(data.get('total_marks'), 'total_marks', errors,
+#                             'Total marks', min_val=1)
+#         if tm is not None:
+#             cleaned['total_marks'] = tm
 
-        # Cross-validate: marks_obtained ≤ total_marks
-        if mo is not None and tm is not None and mo > tm:
-            errors['marks_obtained'] = 'Marks obtained cannot exceed total marks.'
-    else:
-        # Fill defaults so model save() doesn't break
-        tm_raw = data.get('total_marks', '').strip()
-        tm = _parse_decimal(tm_raw, 'total_marks', errors, 'Total marks', min_val=1)
-        if tm is not None:
-            cleaned['total_marks'] = tm
+#         # Cross-validate: marks_obtained ≤ total_marks
+#         if mo is not None and tm is not None and mo > tm:
+#             errors['marks_obtained'] = 'Marks obtained cannot exceed total marks.'
+#     else:
+#         # Fill defaults so model save() doesn't break
+#         tm_raw = data.get('total_marks', '').strip()
+#         tm = _parse_decimal(tm_raw, 'total_marks', errors, 'Total marks', min_val=1)
+#         if tm is not None:
+#             cleaned['total_marks'] = tm
 
-    # ── Feedback ──────────────────────────────────────────────────────────────
-    cleaned['remarks'] = data.get('remarks', '').strip()[:300]
-    cleaned['is_verified'] = data.get('is_verified') == 'on'
+#     # ── Feedback ──────────────────────────────────────────────────────────────
+#     cleaned['remarks'] = data.get('remarks', '').strip()[:300]
+#     cleaned['is_verified'] = data.get('is_verified') == 'on'
 
-    return errors, cleaned
+#     return errors, cleaned
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -536,16 +683,16 @@ def build_performance_summary(assessment):
     perfs = AssessmentPerformance.objects.filter(assessment=assessment)
 
     total      = perfs.count()
-    passed     = perfs.filter(is_pass=True).count()
-    failed     = perfs.filter(is_pass=False).count()
-    absent     = perfs.filter(is_absent=True).count()
-    verified   = perfs.filter(is_verified=True).count()
+    # passed     = perfs.filter(is_pass=True).count()
+    # failed     = perfs.filter(is_pass=False).count()
+    # absent     = perfs.filter(is_absent=True).count()
+    # verified   = perfs.filter(is_verified=True).count()
 
     return {
         'total':    total,
-        'passed':   passed,
-        'failed':   failed,
-        'absent':   absent,
-        'verified': verified,
-        'pass_rate': round((passed / total * 100), 1) if total else 0,
+        # 'passed':   passed,
+        # 'failed':   failed,
+        # 'absent':   absent,
+        # 'verified': verified,
+        # 'pass_rate': round((passed / total * 100), 1) if total else 0,
     }

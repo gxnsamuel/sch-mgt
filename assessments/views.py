@@ -6,13 +6,16 @@ from django.db                      import transaction
 from authentication.models import CustomUser
 from accounts.models import StaffProfile
 from academics.base import TEACHING_STAFF_ROLES
+from academics.models import ClassSubject, AcademicYear
+from academics.models import TeacherClass, TeacherSubject
+from django.utils.timezone import now
 
 from .models import (
     Assessment,
     AssessmentClass,
     AssessmentSubject,
     AssessmentTeacher,
-    AssessmentPassMark,
+    AssessmentTotalMark,
     AssessmentPerformance,
     ASSESSMENT_TYPE_CHOICES,
     MONTH_CHOICES,
@@ -21,40 +24,60 @@ from .utils import (
     validate_assessment,
     validate_assessment_class,
     validate_assessment_subject,
-    validate_assessment_teacher,
-    validate_assessment_passmark,
-    validate_performance,
+    # validate_assessment_teacher,
+    # validate_assessment_passmark,
+    # validate_performance,
     build_performance_summary,
-    VALID_VENUE_CHOICES,
-    VALID_TEACHER_ROLES,
-    VALID_PASS_TYPES,
-    VALID_NURSERY_RATINGS,
+    # VALID_VENUE_CHOICES,
+    # VALID_TEACHER_ROLES,
+    # VALID_PASS_TYPES,
+    # VALID_NURSERY_RATINGS,
 )
+
+from assessments.utils import is_month_in_range, is_range_overlaps_year, period_range_check
+from academics.utils.subject_utils import get_sch_supported_classes
+from django.urls import reverse
+from students.models import Student
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper
 # ─────────────────────────────────────────────────────────────────────────────
+def get_teachers():
+    staffs = StaffProfile.objects.all()
+    teaching_staffs = [t for t in staffs if t.role in TEACHING_STAFF_ROLES]
+    teachers = []
+    for ts in teaching_staffs:
+        tr = CustomUser.objects.filter(pk=ts.user.pk)
+        for t in tr:
+            teachers.append(t)
+    return teachers
 
-def _get_select_context():
+
+
+
+def get_select_context():
     """
     Returns context data needed across multiple add forms
     (dropdown lists for FK fields).
     """
-    from academics.models import Term, SchoolClass, Subject
+    from academics.models import Term, SchoolSupportedClasses, Subject
+
+
     from accounts.models  import CustomUser
 
     return {
         'terms':         Term.objects.all(),
-        'classes':       SchoolClass.objects.all(),
+        'classes':       get_sch_supported_classes(),
         'subjects':      Subject.objects.all(),
-        'teachers':      CustomUser.objects.select_related('user').all(),
+        'teachers':      get_teachers(),
         'type_choices':  ASSESSMENT_TYPE_CHOICES,
         'month_choices': MONTH_CHOICES,
-        'venue_choices': AssessmentClass.VENUE_CHOICES,
-        'role_choices':  AssessmentTeacher.ROLE_CHOICES,
-        'pass_types':    AssessmentPassMark.PASS_TYPE_CHOICES,
-        'nursery_ratings': AssessmentPerformance.NURSERY_RATING_CHOICES,
+        # 'venue_choices': AssessmentClass.VENUE_CHOICES,
+        # 'role_choices':  AssessmentTeacher.ROLE_CHOICES,
+        # 'pass_types':    AssessmentPassMark.PASS_TYPE_CHOICES,
+        # 'nursery_ratings': AssessmentPerformance.NURSERY_RATING_CHOICES,
     }
 
 
@@ -104,109 +127,116 @@ def assessment_list(request):
 # =============================================================================
 # 2. Add Assessment
 # =============================================================================
-
 @login_required
 def add_assessment(request):
-    ctx = _get_select_context()
 
     if request.method == 'POST':
-        errors, cleaned = validate_assessment(request.POST, request.FILES)
 
-        if errors:
-            messages.error(request, 'Please correct the errors below.')
-            ctx.update({'errors': errors, 'post': request.POST})
-            return render(request, 'assessments/add_assessment.html', ctx)
+
+        if request.POST.get('cancel') and request.POST.get('cancel') == 'true':
+            request.session.pop('add_assessment_data', None)
+            return redirect('assessments:list')
+        
+        
+        title                 = request.POST.get('title', '').strip()
+        assessment_type       = request.POST.get('assessment_type', '').strip()
+        description           = request.POST.get('description', '').strip()
+        term                  = request.POST.get('term', '').strip()
+        month                 = request.POST.get('month', '').strip()
+        date_given            = request.POST.get('date_given', '').strip()
+        date_due              = request.POST.get('date_due', '').strip()
+        date_results_released = request.POST.get('date_results_released', '').strip()
+
+        request.session['add_assessment_data'] = {
+            'title': title,
+            'assessment_type': assessment_type,
+            'description': description,
+            'term': term,
+            'month': month,
+            'date_given': date_given,
+            'date_due': date_due,
+            'date_results_released': date_results_released,
+        }
+
+        # FIX 1: was `if not (title, ...)` — a tuple is always truthy; use all() instead
+        if not all([title, assessment_type, term, month, date_given, date_due]):
+            messages.error(request, 'Please fill in all required fields.')
+            return redirect('assessments:add')
+        
+        if assessment_type not in dict(ASSESSMENT_TYPE_CHOICES):
+            messages.error(request, 'Invalid assessment type selected.')
+            return redirect('assessments:add')
+        
+        if int(month) not in dict(MONTH_CHOICES):
+            messages.error(request, 'Invalid month selected.')
+            return redirect('assessments:add')
+
 
         with transaction.atomic():
             assessment = Assessment.objects.create(
-                title                 = cleaned['title'],
-                assessment_type       = cleaned['assessment_type'],
-                description           = cleaned.get('description', ''),
-                term                  = cleaned['term'],
-                # academic_year         = cleaned['academic_year'],
-                month                 = cleaned['month'],
-                date_given            = cleaned['date_given'],
-                date_due              = cleaned.get('date_due'),
-                date_results_released = cleaned.get('date_results_released'),
-                # total_marks           = cleaned['total_marks'],
-                # duration_minutes      = cleaned.get('duration_minutes'),
-                # is_published          = cleaned['is_published'],
-                # results_published     = cleaned['results_published'],
-                notes                 = cleaned.get('notes', ''),
-                created_by            = request.user,
-                **{k: cleaned[k] for k in ('paper_file', 'marking_scheme') if k in cleaned},
+                title=title,
+                assessment_type=assessment_type,
+                description=description,
+                term_id=term,
+                month=month,
+                date_given=date_given,
+                date_due=date_due,
+                date_results_released=date_results_released or None,
+                created_by=request.user,
             )
+            assessment.is_published = False
+            assessment.results_published = False
+            assessment.created_by = request.user
+            assessment.save()
 
-        messages.success(request, f'Assessment "{assessment.title}" created successfully.')
-        return redirect('assessments:detail', pk=assessment.pk)
+            request.session.pop('add_assessment_data', None)
+            messages.success(request, f'Assessment "{assessment.title}" created successfully.')
+            return redirect('assessments:detail', pk=assessment.pk)
 
-    ctx.update({'errors': {}, 'post': {}})
+
+    session_data = request.session.get('add_assessment_data', {})
+    ctx = get_select_context()
+    ctx.update({
+        'post': session_data,
+    })
     return render(request, 'assessments/add_assessment.html', ctx)
-
-
-
-def assign_teacher_to_assessment(request):
-    staffs = StaffProfile.objects.all()
-
-    teaching_staffs = []
-
-    for t in staffs:
-        if t.role in TEACHING_STAFF_ROLES:
-            teaching_staffs.append(t)
-
-    teachers = []
-
-    for ts in teaching_staffs:
-        tr = CustomUser.objects.filter(pk=ts.user__id)
-        for t in tr:
-            teachers.append(t)
-
-    return render(request, "assessments/assign_teacher_to_assessment.html")
-    
-
-    
-
-    
-
-
-# =============================================================================
+#=============================================================================
 # 3. Edit Assessment
 # =============================================================================
 
-@login_required
-def edit_assessment(request, pk):
-    assessment = get_object_or_404(Assessment, pk=pk)
-    ctx = _get_select_context()
-    ctx['assessment'] = assessment
+# @login_required
+# def edit_assessment(request, pk):
+#     assessment = get_object_or_404(Assessment, pk=pk)
+#     ctx = _get_select_context()
+#     ctx['assessment'] = assessment
 
-    if request.method == 'POST':
-        errors, cleaned = validate_assessment(request.POST, request.FILES)
+#     if request.method == 'POST':
+#         errors, cleaned = validate_assessment(request.POST, request.FILES)
 
-        if errors:
-            messages.error(request, 'Please correct the errors below.')
-            ctx.update({'errors': errors, 'post': request.POST})
-            return render(request, 'assessments/edit_assessment.html', ctx)
+#         if errors:
+#             messages.error(request, 'Please correct the errors below.')
+#             ctx.update({'errors': errors, 'post': request.POST})
+#             return render(request, 'assessments/edit_assessment.html', ctx)
 
-        update_fields = [
-            'title', 'assessment_type', 'description', 'term',
-            'month', 'date_given', 'date_due', 'date_results_released',
-            'results_published', 'notes',
-        ]
-        with transaction.atomic():
-            for field in update_fields:
-                if field in cleaned:
-                    setattr(assessment, field, cleaned[field])
-            for ffile in ('paper_file', 'marking_scheme'):
-                if ffile in cleaned:
-                    setattr(assessment, ffile, cleaned[ffile])
-            assessment.save()
+#         update_fields = [
+#             'title', 'assessment_type', 'description', 'term',
+#             'month', 'date_given', 'date_due', 'date_results_released',
+#             'results_published', 'notes',
+#         ]
+#         with transaction.atomic():
+#             for field in update_fields:
+#                 if field in cleaned:
+#                     setattr(assessment, field, cleaned[field])
+#             for ffile in ('paper_file', 'marking_scheme'):
+#                 if ffile in cleaned:
+#                     setattr(assessment, ffile, cleaned[ffile])
+#             assessment.save()
 
-        messages.success(request, f'Assessment "{assessment.title}" updated successfully.')
-        return redirect('assessments:detail', pk=assessment.pk)
+#         messages.success(request, f'Assessment "{assessment.title}" updated successfully.')
+#         return redirect('assessments:detail', pk=assessment.pk)
 
-    ctx.update({'errors': {}, 'post': {}})
-    return render(request, 'assessments/edit_assessment.html', ctx)
-
+#     ctx.update({'errors': {}, 'post': {}})
+#     return render(request, 'assessments/edit_assessment.html', ctx)
 
 # =============================================================================
 # 4. Assessment Detail
@@ -215,56 +245,37 @@ def edit_assessment(request, pk):
 @login_required
 def assessment_detail(request, pk):
     assessment = get_object_or_404(
-        Assessment.objects.select_related('term', 'created_by'), pk=pk
+        Assessment.objects.select_related('term', 'term__academic_year', 'created_by'),
+        pk=pk,
     )
 
-    classes      = assessment.assessment_classes.select_related('school_class')
-    subjects     = assessment.assessment_subjects.select_related('subject')
-    teachers     = assessment.assessment_teachers.select_related( 'subject', 'school_class')
-    # pass_marks   = assessment.pass_marks.select_related('subject', 'set_by__user', 'approved_by')
+    classes = assessment.assessment_classes.select_related(
+        'school_class__supported_class'
+    ).order_by('school_class__supported_class__order')
+
+    subjects = assessment.assessment_subjects.select_related(
+        'subject'
+    ).order_by('subject__name')
+
+    teachers = assessment.assessment_teachers.select_related(
+        'teacher', 'subject', 'school_class'
+    ).order_by('teacher__last_name')
+
     performances = assessment.performances.select_related(
-        'student', 'subject', 'school_class', 'entered_by', 'verified_by'
-    )
-
-    # Performance filters
-    class_filter   = request.GET.get('class', '').strip()
-    subject_filter = request.GET.get('subject', '').strip()
-    status_filter  = request.GET.get('perf_status', '').strip()
-
-    if class_filter:
-        performances = performances.filter(school_class_id=class_filter)
-    if subject_filter:
-        performances = performances.filter(subject_id=subject_filter)
-    if status_filter == 'pass':
-        performances = performances.filter(is_pass=True)
-    elif status_filter == 'fail':
-        performances = performances.filter(is_pass=False)
-    elif status_filter == 'absent':
-        performances = performances.filter(is_absent=True)
+        'student', 'subject', 'school_class',
+        'entered_by', 'verified_by',
+    ).order_by('student__last_name', 'student__first_name')
 
     summary = build_performance_summary(assessment)
-    ctx     = _get_select_context()
-    ctx.update({
-        'assessment':      assessment,
-        'classes':         classes,
-        'subjects':        subjects,
-        'teachers':        teachers,
-        # 'pass_marks':      pass_marks,
-        'performances':    performances,
-        'summary':         summary,
-        # form states for inline add forms
-        'class_errors':    {},   'class_post':    {},
-        'subject_errors':  {},   'subject_post':  {},
-        'teacher_errors':  {},   'teacher_post':  {},
-        'passmark_errors': {},   'passmark_post': {},
-        'perf_errors':     {},   'perf_post':     {},
-        # active filters
-        'filter_class':    class_filter,
-        'filter_subject':  subject_filter,
-        'filter_perf_status': status_filter,
-    })
-    return render(request, 'assessments/assessment_detail.html', ctx)
 
+    return render(request, 'assessments/assessment_detail.html', {
+        'assessment':   assessment,
+        'classes':      classes,
+        'subjects':     subjects,
+        'teachers':     teachers,
+        'performances': performances,
+        'summary':      summary,
+    })
 
 # =============================================================================
 # 5. Delete Assessment
@@ -324,292 +335,777 @@ def change_assessment_status(request, pk):
     return redirect('assessments:detail', pk=pk)
 
 
+
+
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Internal helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_teaching_staff():
+    """Return CustomUser objects for every teaching-role staff member."""
+    result = []
+    for sp in StaffProfile.objects.select_related('user').filter(role__in=TEACHING_STAFF_ROLES):
+        result.append(sp.user)
+    return result
+
+
+def _parse_pos_int(raw, label, errors, key):
+    """Parse a positive integer; append to errors dict on failure."""
+    raw = (raw or '').strip()
+    if not raw:
+        errors[key] = f'{label} is required.'
+        return None
+    try:
+        val = int(raw)
+        if val < 0:
+            raise ValueError
+        return val
+    except (ValueError, TypeError):
+        errors[key] = f'{label} must be a valid whole number.'
+        return None
+
+
+def _parse_pos_decimal(raw, label, errors, key):
+    """Parse a positive decimal; append to errors dict on failure."""
+    from decimal import Decimal, InvalidOperation
+    raw = (raw or '').strip()
+    if not raw:
+        errors[key] = f'{label} is required.'
+        return None
+    try:
+        val = Decimal(raw)
+        if val <= 0:
+            raise ValueError
+        return val
+    except (InvalidOperation, ValueError):
+        errors[key] = f'{label} must be a valid positive number.'
+        return None
+
+
 # =============================================================================
-# 7. Add Assessment Class
+# STEP 1 — Assign Classes
 # =============================================================================
 
 @login_required
 def add_assessment_class(request, pk):
+    """
+    Show every school-supported class as a card with a checkbox and an
+    attendance-count input.  On POST validate and create AssessmentClass rows.
+
+    Re-visiting this page is allowed: existing records are shown and
+    the form pre-excludes already-linked classes so duplicates are impossible.
+    """
     assessment = get_object_or_404(Assessment, pk=pk)
 
-    if request.method != 'POST':
-        return redirect('assessments:detail', pk=pk)
+    supported_classes   = get_sch_supported_classes()
+    already_linked_pks  = set(
+        AssessmentClass.objects
+        .filter(assessment=assessment)
+        .values_list('school_class_id', flat=True)
+    )
 
-    errors, cleaned = validate_assessment_class(request.POST, assessment)
+    # Only offer classes not already linked
+    available_classes = [sc for sc in supported_classes
+                         if sc.pk not in already_linked_pks]
 
-    if errors:
-        messages.error(request, 'Could not add class. Please fix the errors.')
-        # Re-render the detail page with errors
-        classes      = assessment.assessment_classes.select_related('school_class', 'invigilator__user')
-        subjects     = assessment.assessment_subjects.select_related('subject')
-        teachers     = assessment.assessment_teachers.select_related('teacher__user', 'subject', 'school_class')
-        pass_marks   = assessment.pass_marks.select_related('subject', 'set_by__user', 'approved_by')
-        performances = assessment.performances.select_related(
-            'student', 'subject', 'school_class', 'entered_by', 'verified_by'
+    # Current links (for display)
+    existing_classes = (
+        AssessmentClass.objects
+        .filter(assessment=assessment)
+        .select_related('school_class__supported_class')
+        .order_by('school_class__supported_class__order')
+    )
+
+    if request.method == 'POST':
+        errors   = {}
+        selected = []  # list of { 'sc': SchoolSupportedClasses, 'attended': int }
+
+        for sc in available_classes:
+            key      = sc.supported_class.key.lower()
+            checked  = request.POST.get(f'class_{key}')          # checkbox value = sc.pk
+            attended = request.POST.get(f'attended_{key}', '')
+
+            if not checked:
+                continue   # not selected — skip
+
+            attended_val = _parse_pos_int(
+                attended,
+                f'{sc.supported_class.name} — Students Attended',
+                errors,
+                f'attended_{key}',
+            )
+            if attended_val is None:
+                continue
+
+            selected.append({'sc': sc, 'attended': attended_val})
+
+        if not selected and not errors:
+            messages.error(request, 'Please select at least one class.')
+            return redirect(reverse('assessments:add_class', args=[pk]))
+
+        if errors:
+            messages.error(request, 'Please correct the highlighted errors.')
+            ctx = {
+                'assessment':       assessment,
+                'available_classes': available_classes,
+                'existing_classes': existing_classes,
+                'errors':           errors,
+                'post':             request.POST,
+            }
+            return render(request, 'assessments/add_assessment_class.html', ctx)
+
+        with transaction.atomic():
+            for item in selected:
+                AssessmentClass.objects.create(
+                    assessment        = assessment,
+                    school_class      = item['sc'],
+                    students_attended = item['attended'],
+                )
+
+        total = len(selected)
+        messages.success(
+            request,
+            f'{total} class{"es" if total != 1 else ""} added to "{assessment.title}".'
         )
-        ctx = _get_select_context()
-        ctx.update({
-            'assessment':      assessment,
-            'classes':         classes,
-            'subjects':        subjects,
-            'teachers':        teachers,
-            'pass_marks':      pass_marks,
-            'performances':    performances,
-            'summary':         build_performance_summary(assessment),
-            'class_errors':    errors,
-            'class_post':      request.POST,
-            'subject_errors':  {}, 'subject_post':  {},
-            'teacher_errors':  {}, 'teacher_post':  {},
-            'passmark_errors': {}, 'passmark_post': {},
-            'perf_errors':     {}, 'perf_post':     {},
-            'active_tab':      'classes',
-        })
-        return render(request, 'assessments/assessment_detail.html', ctx)
+        return redirect(reverse('assessments:add_subject', args=[pk]))
 
-    with transaction.atomic():
-        AssessmentClass.objects.create(
-            assessment       = assessment,
-            school_class     = cleaned['school_class'],
-            students_invited = cleaned.get('students_invited', 0),
-            students_sat     = cleaned.get('students_sat', 0),
-            students_absent  = cleaned.get('students_absent', 0),
-            venue            = cleaned.get('venue', ''),
-            invigilator      = cleaned.get('invigilator'),
-            start_time       = cleaned.get('start_time'),
-            end_time         = cleaned.get('end_time'),
-            class_remarks    = cleaned.get('class_remarks', ''),
-        )
-
-    messages.success(request, f'Class added to "{assessment.title}" successfully.')
-    return redirect('assessments:detail', pk=pk)
+    ctx = {
+        'assessment':        assessment,
+        'available_classes': available_classes,
+        'existing_classes':  existing_classes,
+        'errors':            {},
+        'post':              {},
+    }
+    return render(request, 'assessments/add_assessment_class.html', ctx)
 
 
 # =============================================================================
-# 8. Add Assessment Subject
+# STEP 2 — Assign Subjects
 # =============================================================================
 
 @login_required
 def add_assessment_subject(request, pk):
+    """
+    For each class already linked to the assessment, show that class's
+    curriculum subjects (from ClassSubject).  Staff tick which subjects
+    are being assessed and set a pass mark for each.
+
+    Guard: assessment must have at least one class linked first.
+    """
     assessment = get_object_or_404(Assessment, pk=pk)
 
-    if request.method != 'POST':
-        return redirect('assessments:detail', pk=pk)
+    assessment_classes = (
+        AssessmentClass.objects
+        .filter(assessment=assessment)
+        .select_related('school_class__supported_class')
+        .order_by('school_class__supported_class__order')
+    )
 
-    errors, cleaned = validate_assessment_subject(request.POST, request.FILES, assessment)
-
-    if errors:
-        messages.error(request, 'Could not add subject. Please fix the errors.')
-        classes      = assessment.assessment_classes.select_related('school_class', 'invigilator__user')
-        subjects     = assessment.assessment_subjects.select_related('subject')
-        teachers     = assessment.assessment_teachers.select_related('teacher__user', 'subject', 'school_class')
-        pass_marks   = assessment.pass_marks.select_related('subject', 'set_by__user', 'approved_by')
-        performances = assessment.performances.select_related(
-            'student', 'subject', 'school_class', 'entered_by', 'verified_by'
+    if not assessment_classes.exists():
+        messages.error(
+            request,
+            'Please assign classes to this assessment first (Step 1).'
         )
-        ctx = _get_select_context()
-        ctx.update({
-            'assessment':      assessment,
-            'classes':         classes,
-            'subjects':        subjects,
-            'teachers':        teachers,
-            'pass_marks':      pass_marks,
-            'performances':    performances,
-            'summary':         build_performance_summary(assessment),
-            'class_errors':    {}, 'class_post':    {},
-            'subject_errors':  errors,
-            'subject_post':    request.POST,
-            'teacher_errors':  {}, 'teacher_post':  {},
-            'passmark_errors': {}, 'passmark_post': {},
-            'perf_errors':     {}, 'perf_post':     {},
-            'active_tab':      'subjects',
+        return redirect(reverse('assessments:add_class', args=[pk]))
+
+
+
+    already_linked_subject_pks = set(
+        AssessmentSubject.objects
+        .filter(assessment=assessment)
+        .values_list('subject_id', flat=True)
+    )
+
+    class_subject_groups = []
+    for ac in assessment_classes:
+        subjects = (
+            ClassSubject.objects
+            .filter(school_class=ac.school_class)
+            .select_related('subject')
+            .order_by('subject__name')
+        )
+        class_subject_groups.append({          # ← uncomment this
+            'ac':       ac,
+            'subjects': list(subjects),        # ← no filtering, show ALL
         })
-        return render(request, 'assessments/assessment_detail.html', ctx)
 
-    with transaction.atomic():
-        kwargs = dict(
-            assessment  = assessment,
-            subject     = cleaned['subject'],
-            total_marks = cleaned['total_marks'],
-            sort_order  = cleaned.get('sort_order', 0),
-            notes       = cleaned.get('notes', ''),
+    # Existing assessment subjects (for display)
+    existing_subjects = (
+        AssessmentSubject.objects
+        .filter(assessment=assessment)
+        .select_related('subject')
+        .order_by('subject__name')
+    )
+
+    if request.method == 'POST':
+        print("POST DATA:", dict(request.POST))
+        errors  = {}
+        to_save = {}
+
+        for group in class_subject_groups:
+            for cs in group['subjects']:
+                subj     = cs.subject
+                key      = f'{group["ac"].school_class.supported_class.key}_{subj.code}'.lower()
+                passmark_raw = request.POST.get(f'passmark_{key}', '').strip()
+
+                # Skip if already linked
+                if subj.pk in already_linked_subject_pks:
+                    continue
+
+                # Skip if passmark is empty — user left it blank, meaning not selected
+                if not passmark_raw:
+                    continue
+
+                # Skip duplicate subject from another class group
+                if subj.pk in to_save:
+                    continue
+
+                passmark = _parse_pos_decimal(
+                    passmark_raw,
+                    f'{subj.code} — Pass Mark',
+                    errors,
+                    f'passmark_{key}',
+                )
+                notes = (request.POST.get(f'notes_{key}', '') or '').strip()[:200]
+
+                if passmark is not None:
+                    to_save[subj.pk] = {
+                        'subject':  subj,
+                        'passmark': passmark,
+                        'notes':    notes,
+                    }
+
+        if not to_save and not errors:
+            messages.error(request, 'Please fill in a pass mark for at least one subject.')
+            return redirect(reverse('assessments:add_subject', args=[pk]))
+
+        if errors:
+            messages.error(request, 'Please correct the highlighted errors.')
+            ctx = {
+                'assessment':                 assessment,
+                'class_subject_groups':       class_subject_groups,
+                'existing_subjects':          existing_subjects,
+                'errors':                     errors,
+                'post':                       request.POST,
+                'already_linked_subject_pks': already_linked_subject_pks,
+            }
+            return render(request, 'assessments/add_assessment_subject.html', ctx)
+
+        with transaction.atomic():
+            for item in to_save.values():
+                AssessmentSubject.objects.get_or_create(
+                    assessment = assessment,
+                    subject    = item['subject'],
+                    defaults   = {
+                        'passmark': item['passmark'],
+                        'notes':    item['notes'],
+                    },
+                )
+
+        total = len(to_save)
+        messages.success(
+            request,
+            f'{total} subject{"s" if total != 1 else ""} added to "{assessment.title}".'
         )
-        if 'paper_file' in cleaned:
-            kwargs['paper_file'] = cleaned['paper_file']
-        AssessmentSubject.objects.create(**kwargs)
+        return redirect(reverse('assessments:add_total_marks', args=[pk]))
 
-    messages.success(request, 'Subject added to assessment successfully.')
-    return redirect('assessments:detail', pk=pk)
+
+    ctx = {
+        'assessment':           assessment,
+        'class_subject_groups': class_subject_groups,
+        'existing_subjects':    existing_subjects,
+        'errors':               {},
+        'post':                 {},
+        'already_linked_subject_pks': already_linked_subject_pks, 
+    }
+    return render(request, 'assessments/add_assessment_subject.html', ctx)
 
 
 # =============================================================================
-# 9. Add Assessment Teacher
+# STEP 3 — Set Total Marks
+# =============================================================================
+
+@login_required
+def add_assessment_total_marks(request, pk):
+    """
+    For each AssessmentSubject already linked to this assessment, allow
+    staff to set the maximum (total) marks available.
+
+    This updates the AssessmentSubject.total_marks field.
+    NOTE: your AssessmentSubject model needs a `total_marks` DecimalField.
+    If you are reusing `passmark` as total_marks (as per your model's help_text)
+    then swap the field name below.
+
+    Guard: assessment must have at least one subject linked first.
+    """
+    assessment = get_object_or_404(Assessment, pk=pk)
+
+    assessment_subjects = (
+        AssessmentSubject.objects
+        .filter(assessment=assessment)
+        .select_related('subject')
+        .order_by('subject__name')
+    )
+
+    if not assessment_subjects.exists():
+        messages.error(
+            request,
+            'Please assign subjects to this assessment first (Step 2).'
+        )
+        return redirect(reverse('assessments:add_subject', args=[pk]))
+
+    if request.method == 'POST':
+        errors  = {}
+        to_save = []   # list of { 'as_subj': AssessmentSubject, 'total': Decimal }
+
+        for as_subj in assessment_subjects:
+            field_key = f'total_mark_{as_subj.pk}'
+            total = _parse_pos_decimal(
+                request.POST.get(field_key, ''),
+                f'{as_subj.subject.code} — Total Marks',
+                errors,
+                field_key,
+            )
+            if total is not None:
+                to_save.append({'as_subj': as_subj, 'total': total})
+
+        if errors:
+            messages.error(request, 'Please correct the highlighted errors.')
+            ctx = {
+                'assessment':         assessment,
+                'assessment_subjects': assessment_subjects,
+                'errors':             errors,
+                'post':               request.POST,
+            }
+            return render(request, 'assessments/add_assessment_total_marks.html', ctx)
+
+        with transaction.atomic():
+            for item in to_save:
+                # Update the passmark field (which your model uses as "max marks")
+                # Replace 'passmark' with 'total_marks' if you add that field separately.
+                item['as_subj'].passmark = item['total']
+                item['as_subj'].save(update_fields=['passmark'])
+
+        messages.success(
+            request,
+            f'Total marks set for {len(to_save)} subject(s) in "{assessment.title}".'
+        )
+        return redirect(reverse('assessments:add_teacher', args=[pk]))
+
+    ctx = {
+        'assessment':          assessment,
+        'assessment_subjects': assessment_subjects,
+        'errors':              {},
+        'post':                {},
+    }
+    return render(request, 'assessments/add_assessment_total_marks.html', ctx)
+
+
+# =============================================================================
+# STEP 4 — Assign Teachers
 # =============================================================================
 
 @login_required
 def add_assessment_teacher(request, pk):
+    """
+    For each (class × subject) pair in the assessment, allow staff to
+    assign the responsible teacher from the pool of teachers who are
+    already linked to that class via TeacherClass and TeacherSubject.
+
+    Guard: assessment must have subjects linked first.
+    """
     assessment = get_object_or_404(Assessment, pk=pk)
 
-    if request.method != 'POST':
-        return redirect('assessments:detail', pk=pk)
+    assessment_classes = (
+        AssessmentClass.objects
+        .filter(assessment=assessment)
+        .select_related('school_class__supported_class')
+        .order_by('school_class__supported_class__order')
+    )
+    assessment_subjects = (
+        AssessmentSubject.objects
+        .filter(assessment=assessment)
+        .select_related('subject')
+    )
 
-    errors, cleaned = validate_assessment_teacher(request.POST, assessment)
-
-    if errors:
-        messages.error(request, 'Could not add teacher. Please fix the errors.')
-        classes      = assessment.assessment_classes.select_related('school_class', 'invigilator__user')
-        subjects     = assessment.assessment_subjects.select_related('subject')
-        teachers     = assessment.assessment_teachers.select_related('teacher__user', 'subject', 'school_class')
-        pass_marks   = assessment.pass_marks.select_related('subject', 'set_by__user', 'approved_by')
-        performances = assessment.performances.select_related(
-            'student', 'subject', 'school_class', 'entered_by', 'verified_by'
+    if not assessment_subjects.exists():
+        messages.error(
+            request,
+            'Please assign subjects to this assessment first (Step 2).'
         )
-        ctx = _get_select_context()
-        ctx.update({
-            'assessment':      assessment,
-            'classes':         classes,
-            'subjects':        subjects,
-            'teachers':        teachers,
-            'pass_marks':      pass_marks,
-            'performances':    performances,
-            'summary':         build_performance_summary(assessment),
-            'class_errors':    {}, 'class_post':    {},
-            'subject_errors':  {}, 'subject_post':  {},
-            'teacher_errors':  errors,
-            'teacher_post':    request.POST,
-            'passmark_errors': {}, 'passmark_post': {},
-            'perf_errors':     {}, 'perf_post':     {},
-            'active_tab':      'teachers',
-        })
-        return render(request, 'assessments/assessment_detail.html', ctx)
+        return redirect(reverse('assessments:add_subject', args=[pk]))
 
-    with transaction.atomic():
-        AssessmentTeacher.objects.create(
-            assessment   = assessment,
-            teacher      = cleaned['teacher'],
-            role         = cleaned['role'],
-            subject      = cleaned.get('subject'),
-            school_class = cleaned.get('school_class'),
-            notes        = cleaned.get('notes', ''),
+    # Already assigned pairs (assessment + teacher + subject + class)
+    already_assigned = set(
+        AssessmentTeacher.objects
+        .filter(assessment=assessment)
+        .values_list('teacher_id', 'subject_id', 'school_class_id')
+    )
+
+    # Build slot grid: one slot per (class, subject) pair
+    # Each slot holds the candidate teachers for that pairing.
+    slots = []
+    for ac in assessment_classes:
+        # Teachers linked to this class
+        class_teacher_links = (
+            TeacherClass.objects
+            .filter(school_class=ac.school_class, is_active=True)
+            .select_related('teacher')
         )
+        class_teacher_users = {tc.teacher for tc in class_teacher_links}
 
-    messages.success(request, 'Teacher linked to assessment successfully.')
-    return redirect('assessments:detail', pk=pk)
+        for as_subj in assessment_subjects:
+            # Teachers for this subject in this class
+            subject_teacher_links = (
+                TeacherSubject.objects
+                .filter(
+                    school_class = ac.school_class,
+                    subject      = as_subj.subject,
+                )
+                .select_related('teacher')
+            )
+            candidates = [
+                ts.teacher for ts in subject_teacher_links
+                if ts.teacher in class_teacher_users
+            ]
 
+            # Fall back: any teacher linked to the class if no subject-specific found
+            if not candidates:
+                candidates = list(class_teacher_users)
 
-# =============================================================================
-# 10. Add Assessment Pass Mark
-# =============================================================================
+            slot_key = (
+                f'{ac.school_class.supported_class.key}_'
+                f'{as_subj.subject.code}'
+            ).lower()
 
-@login_required
-def add_assessment_passmark(request, pk):
-    assessment = get_object_or_404(Assessment, pk=pk)
+            slots.append({
+                'ac':         ac,
+                'as_subj':    as_subj,
+                'candidates': candidates,
+                'slot_key':   slot_key,
+            })
 
-    if request.method != 'POST':
-        return redirect('assessments:detail', pk=pk)
+    if request.method == 'POST':
+        errors  = {}
+        to_save = []
 
-    errors, cleaned = validate_assessment_passmark(request.POST, assessment)
+        for slot in slots:
+            field_key  = f'teacher_{slot["slot_key"]}'
+            teacher_pk = (request.POST.get(field_key) or '').strip()
 
-    if errors:
-        messages.error(request, 'Could not set passmark. Please fix the errors.')
-        classes      = assessment.assessment_classes.select_related('school_class', 'invigilator__user')
-        subjects     = assessment.assessment_subjects.select_related('subject')
-        teachers     = assessment.assessment_teachers.select_related('teacher__user', 'subject', 'school_class')
-        pass_marks   = assessment.pass_marks.select_related('subject', 'set_by__user', 'approved_by')
-        performances = assessment.performances.select_related(
-            'student', 'subject', 'school_class', 'entered_by', 'verified_by'
+            if not teacher_pk:
+                # Optional: skip unselected slots (admin may leave some blank)
+                continue
+
+            try:
+                teacher = CustomUser.objects.get(pk=teacher_pk, is_active=True)
+            except CustomUser.DoesNotExist:
+                errors[field_key] = 'Selected teacher not found or is inactive.'
+                continue
+
+            triple = (teacher.pk, slot['as_subj'].subject_id, slot['ac'].school_class_id)
+            if triple in already_assigned:
+                continue   # already linked — silently skip
+
+            to_save.append({
+                'teacher':      teacher,
+                'subject':      slot['as_subj'].subject,
+                'school_class': slot['ac'].school_class,
+            })
+
+        if errors:
+            messages.error(request, 'Please correct the highlighted errors.')
+            ctx = {
+                'assessment': assessment,
+                'slots':      slots,
+                'errors':     errors,
+                'post':       request.POST,
+            }
+            return render(request, 'assessments/add_assessment_teacher.html', ctx)
+
+        if not to_save:
+            messages.warning(request, 'No new teacher assignments were submitted.')
+            return redirect(reverse('assessments:detail', args=[pk]))
+
+        with transaction.atomic():
+            for item in to_save:
+                AssessmentTeacher.objects.create(
+                    assessment   = assessment,
+                    teacher      = item['teacher'],
+                    subject      = item['subject'],
+                    school_class = item['school_class'],
+                )
+
+        messages.success(
+            request,
+            f'{len(to_save)} teacher assignment(s) saved for "{assessment.title}".'
         )
-        ctx = _get_select_context()
-        ctx.update({
-            'assessment':      assessment,
-            'classes':         classes,
-            'subjects':        subjects,
-            'teachers':        teachers,
-            'pass_marks':      pass_marks,
-            'performances':    performances,
-            'summary':         build_performance_summary(assessment),
-            'class_errors':    {}, 'class_post':    {},
-            'subject_errors':  {}, 'subject_post':  {},
-            'teacher_errors':  {}, 'teacher_post':  {},
-            'passmark_errors': errors,
-            'passmark_post':   request.POST,
-            'perf_errors':     {}, 'perf_post':     {},
-            'active_tab':      'passmarks',
-        })
-        return render(request, 'assessments/assessment_detail.html', ctx)
+        return redirect(reverse('assessments:detail', args=[pk]))
 
-    with transaction.atomic():
-        AssessmentPassMark.objects.create(
-            assessment  = assessment,
-            subject     = cleaned['subject'],
-            pass_type   = cleaned['pass_type'],
-            pass_value  = cleaned['pass_value'],
-            set_by      = cleaned.get('set_by'),
-            notes       = cleaned.get('notes', ''),
-        )
-
-    messages.success(request, 'Passmark set successfully.')
-    return redirect('assessments:detail', pk=pk)
+    ctx = {
+        'assessment': assessment,
+        'slots':      slots,
+        'errors':     {},
+        'post':       {},
+    }
+    return render(request, 'assessments/add_assessment_teacher.html', ctx)
 
 
-# =============================================================================
-# 11. Add Student Performance
-# =============================================================================
+
+
+
+
+
+
+
+
+
+
+CLASSES_MAPPING = {
+    "baby":["baby"],
+    "middle":["baby","middle"],
+    "top":["baby","middle","top"],
+    "p1":["p1"],
+    "p2":["p1","p2"],
+    "p3":["p1","p2","p3"],
+    "p4":["p1","p2","p3","p4"],
+    "p5":["p1","p2","p3","p4","p5"],
+    "p6":["p1","p2","p3","p4","p5","p6"],
+    "p7":["p1","p2","p3","p4","p5","p6","p7"]
+}
+
+GENERAL_CLASSES_MAPPING = {
+    "baby":["baby"],
+    "middle":["baby","middle"],
+    "top":["baby","middle","top"],
+    "p1":["baby","middle","top","p1"],
+    "p2":["baby","middle","top","p1","p2"],
+    "p3":["baby","middle","top","p1","p2","p3"],
+    "p4":["baby","middle","top","p1","p2","p3","p4"],
+    "p5":["baby","middle","top","p1","p2","p3","p4","p5"],
+    "p6":["baby","middle","top","p1","p2","p3","p4","p5","p6"],
+    "p7":["baby","middle","top","p1","p2","p3","p4","p5","p6","p7"]
+}
+
+
+
+
+
+def get_school_start_and_stop_class(assessment):
+    current_year =2026
+    current_academic_year =2026
+    assessment_term = 'Term 3'
+    assessment_term_academic_year = 2026
+
+    assessment_type = 'eot'
+
+    assessment_classes = AssessmentClass.objects.filter(assessment=assessment)
+
+    school_supported_classes = get_sch_supported_classes()
+
+    start_class = None
+    stop_class = None
+
+
+    classes_mapping = CLASSES_MAPPING
+
+
+    for cls in school_supported_classes:
+        if not any(cls_.section == 'primary' for cls_ in school_supported_classes):
+
+            if (cls.supported_class.key == 'baby') and not any(cls.supported_class.key in ['middle','top']):
+                start_class = 'baby'
+                stop_class = 'baby'
+                
+            else:
+                other_classes = classes_mapping.get(cls.supported_class.key,[])
+                start_class = other_classes[0],
+                stop_class = other_classes[-1]
+
+        elif not any(cls_.section == 'nursery' for cls_ in school_supported_classes):
+
+            if (cls.supported_class.key == 'p1') and not any(cls.supported_class.key in ['p2','p3', 'p4','p5','p6','p7']):
+                start_class = 'p1'
+                stop_class = 'p1'
+
+            else:
+                other_classes = classes_mapping.get(cls.supported_class.key, [])
+                start_class = other_classes[0],
+                stop_class = other_classes[-1]
+        
+        else:
+            if (
+                any(
+                    cls_.supported_class.key =="nursery" for cls_ in school_supported_classes
+                    ) and any(
+                        cls_.supported_class.key =="primary" for cls_ in school_supported_classes
+                    )
+                ):
+                if cls.supported_class.section == 'nursery':
+                    initial_class = classes_mapping.get(cls.supported_class.key, []) 
+                    start_class = initial_class[0]
+                
+                elif cls.supported_class.section == 'primary':
+                    end_class = classes_mapping.get(cls.supported_class.key, [])
+                    stop_class =end_class[-1]
+                
+    
+
+
+
+    school_class_range = {
+        "start_class":start_class,
+        "stop_class":stop_class
+    }
+
+    return school_class_range
+
+
+
+def get_student_upcoming_class(student, start_class,end_class):
+
+    current_class = student.current_class
+
+    student_upcomming_class = {
+        'baby':'middle',
+        'middle':'top',
+        'top':'p1',
+        'p1':'p2',
+        'p2':'p3',
+        'p3':'p4',
+        'p4':'p5',
+        'p5':'p6',
+        'p6':'p7',
+        'p7':None
+    }
+
+    nursery_classes = CLASSES_MAPPING.get('top',[])
+    primary_classes = CLASSES_MAPPING.get('p7', [])
+
+    school_class_order =[]
+
+    if start_class in nursery_classes:
+        school_class_order = GENERAL_CLASSES_MAPPING.get(end_class,[])
+    else:
+        school_class_order = CLASSES_MAPPING.get(end_class,[])
+
+
+    upcoming_class = None
+    next_upcoming_class =None
+    current_class = None
+
+
+
+    
+    if school_class_order:
+        if current_class in school_class_order:
+            upcoming_class = student_upcomming_class.get(current_class, "")
+
+            if upcoming_class is not None:
+                next_upcoming_class = student_upcomming_class.get(upcoming_class)
+            else:
+                next_upcoming_class = None
+            
+    return {
+        "upcoming_class":upcoming_class,
+        "next_upcoming_class":next_upcoming_class,
+    }
+
+
+
+
+
+
+        # Here we can promote the student to the new class, that comming next accademic year finds him in the  already promoted
+         
+
+
+
+
+
 
 @login_required
 def add_student_performance(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
+    assessment_classes = AssessmentClass.objects.filter(assessment=assessment)
 
-    if request.method != 'POST':
+    # term = assessment.term
+    # term_academic_year = term.academic_year
+
+    
+
+    if request.method == 'POST':
+
+        student_id = (request.POST.get("student_id") or '').strip()
+        marks_obtained = (request.POST.get('marks_obtained') or '').strip()
+        comment = (request.POST.get("comment") or '').strip()
+        action = (request.POST.get('action') or '').strip()
+
+
+        if not (student_id and marks_obtained):
+            messages.error(request, 'Student ID and Marks Obtained is Required')
+            return redirect(reverse(''))
+        
+        student = Student.objects.filter(student_id=student_id).first()
+
+        if not student :
+            messages.error(request, f"Invalid student ID provided ({student_id})")
+            return redirect(reverse(''))
+        
+
+        assess_clasess = []
+        ac__ = []
+
+        
+        for as_ in assessment_classes:
+            assess_clasess.append(as_.school_class)
+            ac__.append(as_.school_class.supported_class.name.capitalize())
+
+
+        if not (student.current_class in assess_clasess):
+            messages.info(request, f'Student with ID: {student.student_id.upper()} is not in the  supported assessment class {ac__}')
+            return redirect(reverse(''))
+    
+        
+        student_perfomance = AssessmentPerformance.objects.filter(student=student, assessment=assessment).first()
+
+        if student_perfomance:
+            messages.error(request, f'Student with ID: ({student_id.upper()}), Names: {student.first_name.upper()} {student.last_name.upper()}')
+            return redirect(reverse(''))
+        
+
+        # if is_a_promational_assessment:
+        #     if not is_promoted: 
+        #         messages.error(request, "Please decide Whether the Student Is promoted to a New Class or Not")
+
+        student_subject = AssessmentSubject.objects.filter(assessment=assessment, subject__code=request.session.get("performance_code")).first()
+
+
+        with transaction.atomic():
+            perfomance = AssessmentPerformance.objects.create(
+                assessment =assessment,
+                school_class=student.current_class,
+                student=student,
+                subject=student_subject.subject,
+                marks_obtained=marks_obtained,
+                comment=comment,
+            )
+
+            perfomance.entered_by = request.user
+            messages.success(request, f"{student.first_name.upper()} {student.last_name.upper()} ({student.student_id.upper()}) perfomance of {marks_obtained} has been added successfully")
+            if action:
+                if action == 'addClose':
+                    return redirect(reverse(''))
+                elif action == 'add_and_add':
+                    return redirect(reverse(''))
+                
+        messages.success(request, 'Student performance recorded successfully.')
         return redirect('assessments:detail', pk=pk)
+    return render(request, "")
 
-    errors, cleaned = validate_performance(request.POST, assessment)
-
-    if errors:
-        messages.error(request, 'Could not record performance. Please fix the errors.')
-        classes      = assessment.assessment_classes.select_related('school_class', 'invigilator__user')
-        subjects     = assessment.assessment_subjects.select_related('subject')
-        teachers     = assessment.assessment_teachers.select_related('teacher__user', 'subject', 'school_class')
-        pass_marks   = assessment.pass_marks.select_related('subject', 'set_by__user', 'approved_by')
-        performances = assessment.performances.select_related(
-            'student', 'subject', 'school_class', 'entered_by', 'verified_by'
-        )
-        ctx = _get_select_context()
-        ctx.update({
-            'assessment':      assessment,
-            'classes':         classes,
-            'subjects':        subjects,
-            'teachers':        teachers,
-            'pass_marks':      pass_marks,
-            'performances':    performances,
-            'summary':         build_performance_summary(assessment),
-            'class_errors':    {}, 'class_post':    {},
-            'subject_errors':  {}, 'subject_post':  {},
-            'teacher_errors':  {}, 'teacher_post':  {},
-            'passmark_errors': {}, 'passmark_post': {},
-            'perf_errors':     errors,
-            'perf_post':       request.POST,
-            'active_tab':      'performance',
-        })
-        return render(request, 'assessments/assessment_detail.html', ctx)
-
-    with transaction.atomic():
-        AssessmentPerformance.objects.create(
-            assessment     = assessment,
-            student        = cleaned['student'],
-            subject        = cleaned['subject'],
-            school_class   = cleaned['school_class'],
-            marks_obtained = cleaned.get('marks_obtained'),
-            total_marks    = cleaned['total_marks'],
-            nursery_rating = cleaned.get('nursery_rating', ''),
-            is_absent      = cleaned['is_absent'],
-            absent_reason  = cleaned.get('absent_reason', ''),
-            remarks        = cleaned.get('remarks', ''),
-            is_verified    = cleaned.get('is_verified', False),
-            entered_by     = request.user,
-        )
-
-    messages.success(request, 'Student performance recorded successfully.')
-    return redirect('assessments:detail', pk=pk)
 
 
 # =============================================================================
@@ -621,17 +1117,17 @@ def edit_student_performance(request, pk, perf_pk):
     assessment  = get_object_or_404(Assessment, pk=pk)
     performance = get_object_or_404(AssessmentPerformance, pk=perf_pk, assessment=assessment)
 
-    ctx = _get_select_context()
-    ctx['assessment']  = assessment
-    ctx['performance'] = performance
+    # ctx = _get_select_context()
+    # ctx['assessment']  = assessment
+    # ctx['performance'] = performance
 
     if request.method == 'POST':
         errors, cleaned = validate_performance(request.POST, assessment, instance=performance)
 
         if errors:
             messages.error(request, 'Please correct the errors below.')
-            ctx.update({'errors': errors, 'post': request.POST})
-            return render(request, 'assessments/edit_student_performance.html', ctx)
+            # ctx.update({'errors': errors, 'post': request.POST})
+            return render(request, 'assessments/edit_student_performance.html', )
 
         with transaction.atomic():
             performance.student        = cleaned['student']
@@ -649,8 +1145,8 @@ def edit_student_performance(request, pk, perf_pk):
         messages.success(request, 'Performance record updated successfully.')
         return redirect('assessments:performance_detail', pk=pk, perf_pk=performance.pk)
 
-    ctx.update({'errors': {}, 'post': {}})
-    return render(request, 'assessments/edit_student_performance.html', ctx)
+    # ctx.update({'errors': {}, 'post': {}})
+    return render(request, 'assessments/edit_student_performance.html')
 
 
 # =============================================================================
@@ -678,28 +1174,28 @@ def delete_student_performance(request, pk, perf_pk):
 # 14. Student Performance Detail
 # =============================================================================
 
-@login_required
-def student_performance_detail(request, pk, perf_pk):
-    assessment  = get_object_or_404(Assessment, pk=pk)
-    performance = get_object_or_404(
-        AssessmentPerformance.objects.select_related(
-            'student', 'subject', 'school_class',
-            'entered_by', 'verified_by', 'assessment__term'
-        ),
-        pk=perf_pk,
-        assessment=assessment,
-    )
+# @login_required
+# def student_performance_detail(request, pk, perf_pk):
+#     assessment  = get_object_or_404(Assessment, pk=pk)
+#     performance = get_object_or_404(
+#         AssessmentPerformance.objects.select_related(
+#             'student', 'subject', 'school_class',
+#             'entered_by', 'verified_by', 'assessment__term'
+#         ),
+#         pk=perf_pk,
+#         assessment=assessment,
+#     )
 
-    # Try to find the passmark for this subject
-    try:
-        pass_mark = AssessmentPassMark.objects.select_related(
-            'subject', 'set_by__user'
-        ).get(assessment=assessment, subject=performance.subject)
-    except AssessmentPassMark.DoesNotExist:
-        pass_mark = None
+#     # Try to find the passmark for this subject
+#     try:
+#         pass_mark = AssessmentPassMark.objects.select_related(
+#             'subject', 'set_by__user'
+#         ).get(assessment=assessment, subject=performance.subject)
+#     except AssessmentPassMark.DoesNotExist:
+#         pass_mark = None
 
-    return render(request, 'assessments/student_performance_detail.html', {
-        'assessment':  assessment,
-        'performance': performance,
-        'pass_mark':   pass_mark,
-    })
+#     return render(request, 'assessments/student_performance_detail.html', {
+#         'assessment':  assessment,
+#         'performance': performance,
+#         'pass_mark':   pass_mark,
+#     })

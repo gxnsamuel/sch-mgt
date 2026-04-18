@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Teachers — {{ assessment.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="text-secondary">
+    {{ assessment.title|truncatechars:30 }}
+  </a>
+</li>
+<li class="breadcrumb-item active">Assign Teachers</li>
+{% endblock %}
+
+{% block content %}
+
+{% include "assessments/_step_indicator.html" with step=4 assessment=assessment %}
+
+<div class="d-flex align-items-start justify-content-between mb-4 gap-2 flex-wrap">
+  <div>
+    <h4 class="fw-bold mb-1">Step 4 — Assign Teachers</h4>
+    <p class="text-muted small mb-0">
+      Link the responsible teacher to each subject &amp; class slot for
+      <strong>{{ assessment.title }}</strong>.
+      Slots with no eligible teachers are shown greyed out.
+    </p>
+  </div>
+  <a href="{% url 'assessments:add_total_marks' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Total Marks
+  </a>
+</div>
+
+
+{% if slots %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {# Group slots by class for a cleaner layout #}
+  {% regroup slots by ac as class_groups %}
+
+  {% for class_group in class_groups %}
+  <div class="card border mb-3">
+    <div class="card-header bg-transparent py-2 d-flex align-items-center gap-2">
+      <i class="bi bi-mortarboard text-primary"></i>
+      <span class="fw-semibold">
+        {{ class_group.grouper.school_class.supported_class.name }}
+      </span>
+      <span class="badge
+        {% if class_group.grouper.school_class.supported_class.section == 'nursery' %}bg-warning-subtle text-warning border border-warning-subtle
+        {% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %}">
+        {{ class_group.grouper.school_class.supported_class.get_section_display }}
+      </span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle mb-0 small">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width:30%;">Subject</th>
+            <th style="width:50%;">
+              Assign Teacher <span class="text-danger">*</span>
+            </th>
+            <th class="pe-3 text-muted">Candidates</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for slot in class_group.list %}
+          {% with field_key='teacher_'|add:slot.slot_key %}
+          <tr {% if not slot.candidates %}class="table-secondary opacity-75"{% endif %}>
+
+            <td class="ps-3">
+              <span class="badge bg-dark font-monospace me-1">
+                {{ slot.as_subj.subject.code }}
+              </span>
+              {{ slot.as_subj.subject.name }}
+            </td>
+
+            <td>
+              {% if slot.candidates %}
+              <select name="{{ field_key }}"
+                      class="form-select form-select-sm
+                        {% if errors|default:'' %}{% if errors|getitem:field_key %}is-invalid{% endif %}{% endif %}"
+                      style="max-width: 280px;">
+                <option value="">— Select teacher —</option>
+                {% for teacher in slot.candidates %}
+                <option value="{{ teacher.pk }}"
+                  {% if post|default:'' %}
+                    {% if post|getitem:field_key == teacher.pk|stringformat:"s" %}selected{% endif %}
+                  {% endif %}>
+                  {{ teacher.get_full_name|default:teacher.username }}
+                  ({{ teacher.username }})
+                </option>
+                {% endfor %}
+              </select>
+              {% if errors|default:'' %}{% if errors|getitem:field_key %}
+              <div class="invalid-feedback d-block">{{ errors|getitem:field_key }}</div>
+              {% endif %}{% endif %}
+              {% else %}
+              <span class="text-muted fst-italic small">
+                <i class="bi bi-exclamation-circle me-1 text-warning"></i>
+                No eligible teachers found
+              </span>
+              {% endif %}
+            </td>
+
+            <td class="pe-3 text-muted">
+              {{ slot.candidates|length }}
+            </td>
+
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="d-flex gap-2 mt-2">
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-check-lg me-1"></i>Save Teachers &amp; Finish
+    </button>
+    <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary">
+      Cancel
+    </a>
+  </div>
+
+</form>
+
+{% else %}
+<div class="alert alert-warning d-flex align-items-center gap-2">
+  <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+  <div>
+    No teacher assignments could be built — make sure subjects are assigned to
+    this assessment and teachers are configured in the system.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

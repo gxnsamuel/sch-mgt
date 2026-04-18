@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between mb-3">
+
+        <h4>
+
+            School Class Teachers
+
+        </h4>
+
+        <div>
+
+            <button
+                class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#assignModal">
+
+                <i class="bi bi-person-plus"></i>
+
+                Assign Class Teacher
+
+            </button>
+
+
+            <!-- <button
+                class="btn btn-warning"
+                data-bs-toggle="modal"
+                data-bs-target="#editModal">
+
+                <i class="bi bi-pencil-square"></i>
+                Edit Classes
+
+            </button> -->
+
+        </div>
+
+
+
+
+
+    </div>
+
+
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-bordered">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Class</th>
+                        <th>Teacher</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for ct in class_teachers %}
+
+                    <tr>
+
+                        <td>
+
+                            {{ ct.school_class.supported_class.name }}
+
+                        </td>
+
+                        <td>
+
+                            {{ ct.teacher.full_name }}
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+
+                        <td colspan="2"
+                            class="text-center">
+
+                            No class teachers assigned
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<div
+    class="modal fade"
+    id="assignModal">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <form method="POST">
+
+                {% csrf_token %}
+
+                <div class="modal-header">
+
+                    <h5>
+
+                        Assign Class Teacher
+
+                    </h5>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- Supported Classes -->
+
+                    <label class="form-label">
+
+                        Select Class
+
+                    </label>
+
+                    <select
+                        name="school_class"
+                        class="form-select mb-3"
+                        required>
+
+                        <option value="">
+
+                            Select Class
+
+                        </option>
+
+                        {% for sc in supported_classes %}
+
+                        <option
+                            value="{{ sc.id }}">
+
+                            {{ sc.supported_class.name }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <!-- Staff ID -->
+
+                    <label class="form-label">
+
+                        Staff ID
+
+                    </label>
+
+                    <input
+                        type="text"
+                        name="staff_id"
+                        class="form-control mb-3"
+                        placeholder="EMP20250001"
+                        required>
+
+                    <!-- Password -->
+
+                    <label class="form-label">
+
+                        Your Password
+
+                    </label>
+
+                    <input
+                        type="password"
+                        name="password"
+                        class="form-control"
+                        required>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        class="btn btn-primary">
+
+                        Assign Teacher
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+{% endblock %}

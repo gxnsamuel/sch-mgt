@@ -21,7 +21,7 @@
 from django.db import models
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
-from academics.models import SchoolStream
+from academics.models import SchoolStream,SchoolSupportedClasses
 
 ASSESSMENT_TYPE_CHOICES = [
     ('bot',       'Beginning of Term Exam (BOT)'),
@@ -161,35 +161,14 @@ class AssessmentClass(TimeStampedModel):
                            related_name='assessment_classes'
                        )
     school_class     = models.ForeignKey(
-                           'academics.SchoolClass', on_delete=models.CASCADE,
+                           SchoolSupportedClasses, on_delete=models.CASCADE,
                            related_name='class_assessment_links'
                        )
-    school_stream = models.ForeignKey(
-                        SchoolStream, on_delete=models.CASCADE,
-                        related_name='assessments',
-                        null=True, blank=True
-                    )
-    students_invited = models.PositiveIntegerField(default=0,
+    students_attended = models.PositiveIntegerField(default=0,
                            help_text='Students expected to sit')
-    students_sat     = models.PositiveIntegerField(default=0,
-                           help_text='Students who actually sat')
-    students_absent  = models.PositiveIntegerField(default=0)
-    venue            = models.CharField(max_length=20, choices=VENUE_CHOICES, blank=True)
-    invigilator      = models.ForeignKey(
-                           CustomUser, on_delete=models.SET_NULL,
-                           null=True, blank=True,
-                           related_name='invigilated_classes'
-                       )
-    start_time       = models.TimeField(null=True, blank=True)
-    end_time         = models.TimeField(null=True, blank=True)
-    class_remarks    = models.CharField(max_length=300, blank=True)
-
     class Meta:
         verbose_name        = 'Assessment Class'
         verbose_name_plural = 'Assessment Classes'
-        unique_together     = ['assessment', 'school_class']
-        ordering            = ['assessment', 'school_class']
-
     @property
     def attendance_rate(self):
         if self.students_invited:
@@ -198,8 +177,7 @@ class AssessmentClass(TimeStampedModel):
 
     def __str__(self):
         return (
-            f"{self.assessment.title} | {self.school_class} | "
-            f"Sat: {self.students_sat}/{self.students_invited}"
+            f"{self.assessment.title} | {self.school_class}"
         )
 
 
@@ -225,25 +203,18 @@ class AssessmentSubject(TimeStampedModel):
                       'academics.Subject', on_delete=models.CASCADE,
                       related_name='subject_assessment_links'
                   )
-    total_marks = models.DecimalField(max_digits=7, decimal_places=1,
+    passmark = models.DecimalField(max_digits=7, decimal_places=1,
                       help_text='Max marks for this subject in this assessment')
-    paper_file  = models.FileField(
-                      upload_to='assessments/subject_papers/',
-                      blank=True, null=True,
-                      help_text='Subject-specific paper (if different from main paper)'
-                  )
-    sort_order  = models.PositiveIntegerField(default=0,
-                      help_text='Order on report e.g. 1=English, 2=Maths')
+
     notes       = models.CharField(max_length=200, blank=True)
 
     class Meta:
         verbose_name        = 'Assessment Subject'
         verbose_name_plural = 'Assessment Subjects'
-        unique_together     = ['assessment', 'subject']
-        ordering            = ['assessment', 'sort_order', ]
+        ordering            = ['assessment', ]
 
     def __str__(self):
-        return f"{self.assessment.title} | {self.subject.code} | Max: {self.total_marks}"
+        return f"{self.assessment.title} | {self.subject.code} | Max: {self.passmark}"
 
 
 # =============================================================================
@@ -255,14 +226,14 @@ class AssessmentTeacher(TimeStampedModel):
     Links an Assessment to one or more Teachers and captures each teacher's role.
     A teacher can also be linked to a specific subject or class they handled.
     """
-    ROLE_CHOICES = [
-        ('organiser',     'Organiser / Coordinator'),
-        ('invigilator',   'Invigilator'),
-        ('marker',        'Marker / Examiner'),
-        ('setter',        'Paper Setter'),
-        ('class_teacher', 'Class Teacher'),
-        ('supervisor',    'Supervisor'),
-    ]
+    # ROLE_CHOICES = [
+    #     ('organiser',     'Organiser / Coordinator'),
+    #     ('invigilator',   'Invigilator'),
+    #     ('marker',        'Marker / Examiner'),
+    #     ('setter',        'Paper Setter'),
+    #     ('class_teacher', 'Class Teacher'),
+    #     ('supervisor',    'Supervisor'),
+    # ]
 
     assessment    = models.ForeignKey(
                         Assessment, on_delete=models.CASCADE,
@@ -272,7 +243,7 @@ class AssessmentTeacher(TimeStampedModel):
                         CustomUser, on_delete=models.CASCADE,
                         related_name='teacher_assessment_links'
                     )
-    role          = models.CharField(max_length=20, choices=ROLE_CHOICES)
+
     subject       = models.ForeignKey(
                         'academics.Subject', on_delete=models.SET_NULL,
                         null=True, blank=True,
@@ -285,19 +256,10 @@ class AssessmentTeacher(TimeStampedModel):
                         related_name='class_assessment_teachers',
                         help_text='Class this teacher handled (invigilator / class_teacher)'
                     )
-    
-    school_stream = models.ForeignKey(
-                        SchoolStream, on_delete=models.CASCADE,
-                        related_name='class_assessment_teachers',
-                        null=True, blank=True
-                    )
-    notes         = models.CharField(max_length=200, blank=True)
-
     class Meta:
         verbose_name        = 'Assessment Teacher'
         verbose_name_plural = 'Assessment Teachers'
-        unique_together     = ['assessment', 'teacher', 'role']
-        ordering            = ['assessment', 'role', 'teacher']
+
 
     def __str__(self):
         subj = f" → {self.subject.code}" if self.subject else ''
@@ -311,61 +273,36 @@ class AssessmentTeacher(TimeStampedModel):
 # 5. ASSESSMENT PASS MARK  —  Per-subject passmark  (NEW MODEL)
 # =============================================================================
 
-class AssessmentPassMark(TimeStampedModel):
-    """
-    Defines the passmark for a specific subject in a specific assessment.
-    Each teacher can set a different passmark per subject per assessment.
-
-    Examples:
-        English in BOT Exam  → 50%  (set by English teacher)
-        Maths in BOT Exam    → 45%  (set by Maths teacher)
-        Science in MOT Test  → 65%  (set by Science teacher)
-
-    pass_type:
-        'percentage' — value expressed as % of total_marks e.g. 50.0 means 50%
-        'absolute'   — value expressed as raw marks e.g. 45.0 means 45 marks
-    """
-    PASS_TYPE_CHOICES = [
-        ('percentage', 'Percentage of total marks'),
-        ('absolute',   'Absolute marks'),
-    ]
+class AssessmentTotalMark(TimeStampedModel):
 
     assessment  = models.ForeignKey(
                       Assessment, on_delete=models.CASCADE,
-                      related_name='pass_marks'
+                      related_name='total_mark'
                   )
     subject     = models.ForeignKey(
-                      'academics.Subject', on_delete=models.CASCADE,
-                      related_name='assessment_pass_marks'
+                      AssessmentSubject, on_delete=models.CASCADE,
+                      related_name='assessment_total_mark'
                   )
-    pass_type   = models.CharField(max_length=15, choices=PASS_TYPE_CHOICES,
-                      default='percentage')
-    pass_value  = models.DecimalField(max_digits=6, decimal_places=1,
+
+    total_mark  = models.DecimalField(max_digits=6, decimal_places=1,
                       help_text=(
-                          'The passmark value. '
+                          'The total mark value. '
                           'percentage → e.g. 50.0 (means 50%). '
                           'absolute   → e.g. 45.0 (means 45 marks).'
                       ))
-    set_by      = models.ForeignKey(
-                      CustomUser, on_delete=models.SET_NULL,
-                      null=True, blank=True,
-                      related_name='pass_marks_set',
-                      help_text='The teacher who set this passmark'
-                  )
-    approved_by = models.ForeignKey(
-                      CustomUser, on_delete=models.SET_NULL,
-                      null=True, blank=True,
-                      related_name='pass_marks_approved',
-                      help_text='Head teacher or admin who approved this passmark'
-                  )
-    notes       = models.CharField(max_length=200, blank=True,
-                      help_text='E.g. "Adjusted because paper was difficult"')
-
     class Meta:
-        verbose_name        = 'Assessment Pass Mark'
-        verbose_name_plural = 'Assessment Pass Marks'
-        unique_together     = ['assessment', 'subject']
+        verbose_name        = 'Assessment Total Mark'
+        verbose_name_plural = 'Assessment Total Marks'
         ordering            = ['assessment']
+
+    def __str__(self):
+        return self.assessment.assessment_type
+    
+
+
+
+
+
 
     def get_absolute_pass_mark(self, total_marks):
         """
@@ -390,41 +327,6 @@ class AssessmentPassMark(TimeStampedModel):
 # =============================================================================
 
 class AssessmentPerformance(TimeStampedModel):
-    """
-    Records every student's result for every subject in an assessment.
-    One row = one student × one subject × one assessment.
-
-    Pass/fail is auto-computed on save by comparing marks_obtained
-    against AssessmentPassMark for that subject.
-
-    Supports both:
-        Primary  — numerical marks + computed UNEB-style grade (D1–F9)
-        Nursery  — developmental rating (EE / ME / AE / NS)
-
-    Analytics entry points:
-        Per student   → filter by student + assessment
-        Per subject   → filter by subject + assessment
-        Per class     → filter by school_class + assessment
-        Per teacher   → via AssessmentTeacher, then filter performances for their subjects
-    """
-    GRADE_CHOICES = [
-        ('D1', 'Distinction 1 (90–100%)'),
-        ('D2', 'Distinction 2 (80–89%)'),
-        ('C3', 'Credit 3 (70–79%)'),
-        ('C4', 'Credit 4 (65–69%)'),
-        ('C5', 'Credit 5 (60–64%)'),
-        ('C6', 'Credit 6 (55–59%)'),
-        ('P7', 'Pass 7 (45–54%)'),
-        ('P8', 'Pass 8 (35–44%)'),
-        ('F9', 'Fail 9 (0–34%)'),
-    ]
-    NURSERY_RATING_CHOICES = [
-        ('EE', 'Exceeds Expectations'),
-        ('ME', 'Meets Expectations'),
-        ('AE', 'Approaching Expectations'),
-        ('NS', 'Needs Support'),
-    ]
-
     # Core links
     assessment   = models.ForeignKey(
                        Assessment, on_delete=models.CASCADE,
@@ -434,43 +336,24 @@ class AssessmentPerformance(TimeStampedModel):
                        'students.Student', on_delete=models.CASCADE,
                        related_name='assessment_performances'
                    )
+    
     subject      = models.ForeignKey(
                        'academics.Subject', on_delete=models.CASCADE,
-                       related_name='student_performances'
+                       related_name='assessment_performances'
                    )
+    
+
     school_class = models.ForeignKey(
                        'academics.SchoolClass', on_delete=models.CASCADE,
                        related_name='assessment_performances'
                    )
-    school_stream = models.ForeignKey(
-                        SchoolStream, on_delete=models.CASCADE,
-                        related_name='assessment_performances',
-                        null=True, blank=True
-                    )
-    # Marks (Primary)
     marks_obtained = models.DecimalField(max_digits=7, decimal_places=1,
                          null=True, blank=True,
                          help_text='Marks scored (Primary). Leave blank for Nursery.')
-    total_marks    = models.DecimalField(max_digits=7, decimal_places=1,
-                         help_text='Max marks available for this subject in this assessment')
-    grade          = models.CharField(max_length=5, choices=GRADE_CHOICES, blank=True,
-                         help_text='Auto-computed UNEB-style grade on save')
-
-    # Nursery developmental rating
-    nursery_rating = models.CharField(max_length=5, choices=NURSERY_RATING_CHOICES, blank=True,
-                         help_text='Developmental rating for Nursery (Baby–Top Class)')
-
-    # Pass / fail — auto-computed against AssessmentPassMark
-    is_pass        = models.BooleanField(null=True, blank=True,
-                         help_text='Auto-computed vs AssessmentPassMark. Null = not yet computed.')
-
     # Attendance
-    is_absent      = models.BooleanField(default=False)
-    absent_reason  = models.CharField(max_length=200, blank=True,
-                         help_text='E.g. "Sick", "Travel", "Family emergency"')
 
     # Teacher feedback
-    remarks        = models.CharField(max_length=300, blank=True,
+    comment        = models.CharField(max_length=300, blank=True,
                          help_text='Subject teacher remark e.g. "Excellent" or "Needs more reading"')
     entered_by     = models.ForeignKey(
                          CustomUser, on_delete=models.SET_NULL,
@@ -490,58 +373,19 @@ class AssessmentPerformance(TimeStampedModel):
     class Meta:
         verbose_name        = 'Assessment Performance'
         verbose_name_plural = 'Assessment Performances'
-        unique_together     = ['assessment', 'student', 'subject']
-        ordering            = ['assessment', 'school_class', 'student__last_name', ]
+        ordering            = ['assessment', 'student__last_name', ]
 
     # Computed helpers
 
-    @property
-    def percentage(self):
-        if self.marks_obtained is not None and self.total_marks:
-            return round(float(self.marks_obtained) / float(self.total_marks) * 100, 1)
-        return None
-
-    def _compute_grade(self, pct):
-        if pct is None:
-            return ''
-        if pct >= 90: return 'D1'
-        if pct >= 80: return 'D2'
-        if pct >= 70: return 'C3'
-        if pct >= 65: return 'C4'
-        if pct >= 60: return 'C5'
-        if pct >= 55: return 'C6'
-        if pct >= 45: return 'P7'
-        if pct >= 35: return 'P8'
-        return 'F9'
-
-    def _compute_pass(self):
-        if self.marks_obtained is None or self.is_absent:
-            return None
-        try:
-            pm = AssessmentPassMark.objects.get(
-                assessment=self.assessment,
-                subject=self.subject
-            )
-            threshold = pm.get_absolute_pass_mark(float(self.total_marks))
-            return float(self.marks_obtained) >= threshold
-        except AssessmentPassMark.DoesNotExist:
-            return None
-
-    def save(self, *args, **kwargs):
-        pct = self.percentage
-        if pct is not None and not self.nursery_rating:
-            self.grade = self._compute_grade(pct)
-        self.is_pass = self._compute_pass()
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        if self.is_absent:
-            status = 'ABSENT'
-        elif self.nursery_rating:
-            status = self.nursery_rating
-        elif self.marks_obtained is not None:
-            status = f"{self.marks_obtained}/{self.total_marks} ({self.percentage}%) {self.grade}"
-        else:
-            status = 'Not entered'
-        pass_flag = ' PASS' if self.is_pass is True else (' FAIL' if self.is_pass is False else '')
-        return f"{self.student} | {self.subject.code} | {self.assessment.title} | {status}{pass_flag}"
+        self.student.student_id
+
+
+
+
+# class SchoolLowerClassesAssessmentPerfomanceType(TimeStampedModel):
+#     pass
+
+
+# class LowerClassesAssessmentPerfomanceEntryType(TimeStampedModel):
+#     assessment = models.ForeignKey(Assessment, related_name='lower_class_assessment_perfomance_entry_type', on_delete=models.CASCADE)

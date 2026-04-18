@@ -115,3 +115,185 @@ def school_supported_classes_manage(request):
     )
 
 
+
+
+
+# views.py
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+
+from academics.models import (
+    SchoolSupportedClasses,
+    SchoolClassTeacher
+)
+
+from accounts.models import (
+    StaffProfile,
+    CustomUser
+)
+
+
+@login_required
+def assign_class_teacher(request):
+
+    supported_classes = (
+        SchoolSupportedClasses.objects
+        .select_related("supported_class")
+        .all()
+    )
+
+    class_teachers = (
+        SchoolClassTeacher.objects
+        .select_related(
+            "teacher",
+            "school_class__supported_class"
+        )
+        .all()
+    )
+
+    if request.method == "POST":
+
+        class_id = request.POST.get("school_class")
+
+        staff_id = request.POST.get("staff_id")
+
+        password = request.POST.get("password")
+
+        # -------------------------
+        # Verify assigning user password
+        # -------------------------
+
+        if not request.user.check_password(password):
+
+            messages.error(
+                request,
+                "Incorrect password."
+            )
+
+            return redirect(
+                "academics:assign_class_teacher"
+            )
+
+        # -------------------------
+        # Get supported class
+        # -------------------------
+
+        try:
+
+            school_class = (
+                SchoolSupportedClasses.objects
+                .get(id=class_id)
+            )
+
+        except SchoolSupportedClasses.DoesNotExist:
+
+            messages.error(
+                request,
+                "Class not found."
+            )
+
+            return redirect(
+                "academics:assign_class_teacher"
+            )
+
+        # -------------------------
+        # Find staff by employee ID
+        # -------------------------
+
+        try:
+
+            staff_profile = (
+                StaffProfile.objects
+                .select_related("user")
+                .get(
+                    employee_id=staff_id,
+                    is_active=True
+                )
+            )
+
+        except StaffProfile.DoesNotExist:
+
+            messages.error(
+                request,
+                "Staff not found."
+            )
+
+            return redirect(
+                "academics:assign_class_teacher"
+            )
+
+        # -------------------------
+        # Ensure teacher role
+        # -------------------------
+
+        if not staff_profile.is_teaching_staff:
+
+            messages.error(
+                request,
+                "Selected staff is not a teacher."
+            )
+
+            return redirect(
+                "academics:assign_class_teacher"
+            )
+
+        # -------------------------
+        # Prevent duplicate assignment
+        # -------------------------
+
+        if SchoolClassTeacher.objects.filter(
+            school_class=school_class
+        ).exists():
+
+            messages.warning(
+                request,
+                "This class already has a class teacher."
+            )
+
+            return redirect(
+                "academics:assign_class_teacher"
+            )
+
+        # -------------------------
+        # Assign teacher
+        # -------------------------
+
+        SchoolClassTeacher.objects.create(
+
+            teacher=staff_profile.user,
+
+            school_class=school_class
+
+        )
+
+        # -------------------------
+        # Update staff profile
+        # -------------------------
+
+        staff_profile.is_class_teacher = True
+
+        staff_profile.class_managed = (
+            school_class.supported_class
+        )
+
+        staff_profile.save()
+
+        messages.success(
+            request,
+            f"{staff_profile.full_name} assigned as class teacher."
+        )
+
+        return redirect(
+            "academics:assign_class_teacher"
+        )
+
+    return render(
+        request,
+        "academics/class/assign_class_teacher.html",
+        {
+            "supported_classes": supported_classes,
+            "class_teachers": class_teachers,
+        }
+    )

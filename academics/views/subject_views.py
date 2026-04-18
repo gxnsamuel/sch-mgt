@@ -346,13 +346,13 @@ def subject_detail_info(request, pk):
     Links out to the teachers and classes pages.
     """
     subject = get_object_or_404(Subject, pk=pk)
-    stats   = get_subject_info_stats(subject)
+    # stats   = get_subject_info_stats(subject)
 
     context = {
         'subject':       subject,
         # 'level_display': LEVEL_DISPLAY.get(subject.level, subject.level),
         'page_title':    f'{subject.name} ({subject.code})',
-        **stats,
+        # **stats,
     }
     return render(request, f'{_T}info.html', context)
 

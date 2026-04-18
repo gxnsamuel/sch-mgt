@@ -96,6 +96,8 @@ class AcademicYear(models.Model):
         help_text="Example: 2026"
     )
 
+    year = models.PositiveIntegerField(null=True)
+
     start_date = models.DateField()
 
     end_date = models.DateField()
@@ -860,7 +862,7 @@ class TeacherSubject(TimeStampedModel):
     class Meta:
         verbose_name        = 'Teacher Subject'
         verbose_name_plural = 'Teacher Subjects'
-        unique_together     = [ 'subject']
+
 
     def __str__(self):
         return f"{self.teacher} → {self.subject.code}"
@@ -910,5 +912,4 @@ class TeacherClass(TimeStampedModel):
             f"{self.teacher} | "
             f"{self.school_class}"
         )
-
 

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load assessments_extras %}
+{% block title %}Set Total Marks — {{ assessment.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="text-secondary">
+    {{ assessment.title|truncatechars:30 }}
+  </a>
+</li>
+<li class="breadcrumb-item active">Set Total Marks</li>
+{% endblock %}
+
+{% block content %}
+
+{% include "assessments/_step_indicator.html" with step=3 assessment=assessment %}
+
+<div class="d-flex align-items-start justify-content-between mb-4 gap-2 flex-wrap">
+  <div>
+    <h4 class="fw-bold mb-1">Step 3 — Set Total Marks</h4>
+    <p class="text-muted small mb-0">
+      Enter the maximum marks available for each subject in
+      <strong>{{ assessment.title }}</strong>.
+    </p>
+  </div>
+  <a href="{% url 'assessments:add_subject' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Subjects
+  </a>
+</div>
+
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="card border mb-4">
+    <div class="card-header bg-transparent py-2">
+      <span class="fw-semibold small text-muted text-uppercase">
+        <i class="bi bi-award me-1"></i>Maximum Marks Per Subject
+      </span>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width:40%;">Subject</th>
+            <th style="width:30%;">
+              Total Marks <span class="text-danger">*</span>
+            </th>
+            <th class="text-muted small pe-3">Current Pass Mark</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for as_subj in assessment_subjects %}
+          {% with field_key='total_mark_'|add:as_subj.pk|stringformat:"s" %}
+          <tr>
+            <td class="ps-3">
+              <span class="badge bg-dark font-monospace me-1">{{ as_subj.subject.code }}</span>
+              <span class="fw-semibold">{{ as_subj.subject.name }}</span>
+            </td>
+            <td>
+              <input type="number"
+                     name="{{ field_key }}"
+                     class="form-control form-control-sm
+                       {% if errors|default:'' %}{% if errors|getitem:field_key %}is-invalid{% endif %}{% endif %}"
+                     style="max-width: 120px;"
+                     value="{{ post|default:''|getitem:field_key|default:'' }}"
+                     min="1" step="0.5"
+                     placeholder="e.g. 100">
+              {% if errors|default:'' %}{% if errors|getitem:field_key %}
+              <div class="invalid-feedback d-block">{{ errors|getitem:field_key }}</div>
+              {% endif %}{% endif %}
+            </td>
+            <td class="text-muted small pe-3">
+              {% if as_subj.passmark %}
+                {{ as_subj.passmark }}
+              {% else %}
+                <span class="opacity-50">Not set</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-check-lg me-1"></i>Save &amp; Continue to Teachers
+    </button>
+    <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary">
+      Cancel
+    </a>
+  </div>
+
+</form>
+
+{% endblock %}

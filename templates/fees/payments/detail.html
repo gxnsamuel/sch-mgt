@@ -11,7 +11,6 @@
 
 {% block content %}
 
-
 {% if prev_payment or next_payment %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   {% if prev_payment %}
@@ -34,7 +33,6 @@
   {% endif %}
 </div>
 {% endif %}
-
 
 <div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
   <div>
@@ -59,7 +57,6 @@
 </div>
 
 <div class="row g-4">
-
 
   <div class="col-12 col-lg-8">
 
@@ -108,7 +105,7 @@
               Payment
             </div>
             <div class="fw-800 text-success font-monospace mb-1" style="font-size:2rem;line-height:1;">
-              {{ payment.amount_paid|floatformat:0 }}
+              {{ payment.amount|floatformat:0 }}
             </div>
             <div class="text-muted small fw-600">Uganda Shillings (UGX)</div>
             <div class="text-muted small mt-2">
@@ -205,10 +202,18 @@
                 </a>
               </td>
               <td class="text-muted">
-                {{ p.school_fees.get_fees_type_display|default:"—" }}
+                {% if p.school_fees %}
+                  {{ p.school_fees.get_fees_type_display|default:"—" }}
+                {% elif p.assessment_fees and p.assessment_fees.assessment %}
+                  {{ p.assessment_fees.assessment.title }}
+                {% elif p.assessment_fees %}
+                  Assessment Fee
+                {% else %}
+                  —
+                {% endif %}
               </td>
               <td class="text-muted">{{ p.payment_date|date:"d M Y" }}</td>
-              <td class="text-end font-monospace fw-700">{{ p.amount_paid|floatformat:0 }}</td>
+              <td class="text-end font-monospace fw-700">{{ p.amount|floatformat:0 }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -226,7 +231,6 @@
     {% endif %}
 
   </div>{# /col-lg-8 #}
-
 
   <div class="col-12 col-lg-4">
 
@@ -253,11 +257,11 @@
 
           {% if fee %}
           <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Fee Total</dt>
-          <dd class="col-7 font-monospace">{{ fee_amount|floatformat:0 }}</dd>
+          <dd class="col-7 font-monospace">{{ fee.amount|floatformat:0 }}</dd>
           {% endif %}
 
           <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">This Payment</dt>
-          <dd class="col-7 fw-800 font-monospace text-success">{{ payment.amount_paid|floatformat:0 }}</dd>
+          <dd class="col-7 fw-800 font-monospace text-success">{{ payment.amount|floatformat:0 }}</dd>
 
           <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Coverage</dt>
           <dd class="col-7 fw-700 text-primary">{{ coverage }}%</dd>
@@ -313,7 +317,7 @@
           <a href="{% url 'fees:payment_edit' payment.pk %}" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-pencil me-1"></i>Edit This Payment
           </a>
-          <a href="{% url 'fees:payment_add' %}" class="btn btn-sm btn-outline-success">
+          <a href="{% url 'fees:add_payment' %}" class="btn btn-sm btn-outline-success">
             <i class="bi bi-plus-lg me-1"></i>Record Another Payment
           </a>
           <a href="{% url 'fees:payment_delete' payment.pk %}" class="btn btn-sm btn-outline-danger">

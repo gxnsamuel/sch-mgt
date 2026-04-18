@@ -57,6 +57,8 @@ app_name = 'academics'
 urlpatterns = [
 
     path("supported-classes/add/", views.school_supported_classes_manage, name="school_supported_classes_manage"),
+    path("class-teachers/", views.assign_class_teacher, name="assign_class_teacher" ),
+
 
 
 

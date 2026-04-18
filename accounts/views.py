@@ -165,6 +165,20 @@ def register_staff(request):
     user_c: dict = {}
     prof_c: dict = {}
 
+    if request.method == 'POST' and request.POST.get("cancel_form") == 'Cancel':
+        session_keys = [
+            'is_a_teaching_staff',
+            'StaffData',
+            'configure_class_tr',
+            'is_a_class_tr',
+        ]
+
+        for k in session_keys:
+            request.session.pop(k, None)
+
+        messages.info(request, "Staff Registration has been cancelled successfully!")
+        return redirect(reverse("accounts:user_list"))
+
     # ─────────────────────────────────────────────────────────────────────────
     #  STAGE 1  –  basic info (only when NOT yet in teaching-staff session flow)
     # ─────────────────────────────────────────────────────────────────────────
