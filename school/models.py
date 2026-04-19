@@ -8,7 +8,7 @@
 from django.db import models
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
-from academics.models import SchoolStream
+from academics.models import SchoolStream,SchoolSupportedClasses
 
 class SchoolSetting(models.Model):
     """
@@ -181,18 +181,11 @@ class SchoolAnnouncement(TimeStampedModel):
     attachment   = models.FileField(upload_to='announcements/', blank=True, null=True)
     # Target a specific class (optional — leave blank for school-wide)
     school_class = models.ForeignKey(
-                       'academics.SchoolClass',
+                       SchoolSupportedClasses,
                        on_delete=models.SET_NULL,
                        null=True, blank=True,
                        related_name='announcements'
                    )
-    
-    school_stream = models.ForeignKey(
-                        SchoolStream, on_delete=models.CASCADE,
-                        related_name='announcements',
-                        null=True, blank=True
-                    )
-    
     posted_by    = models.ForeignKey(
                        CustomUser,
                        on_delete=models.SET_NULL,
