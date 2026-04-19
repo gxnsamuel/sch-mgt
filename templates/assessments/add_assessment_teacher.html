@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load assessments_extras %}
+
 {% block title %}Assign Teachers — {{ assessment.title }}{% endblock %}
 
 {% block breadcrumb %}
@@ -33,12 +35,15 @@
 </div>
 
 
+
 {% if slots %}
 <form method="post" novalidate>
   {% csrf_token %}
 
   {# Group slots by class for a cleaner layout #}
   {% regroup slots by ac as class_groups %}
+
+  {{ class_groups }}
 
   {% for class_group in class_groups %}
   <div class="card border mb-3">

@@ -543,24 +543,34 @@ def add_assessment_subject(request, pk):
     if request.method == 'POST':
         print("POST DATA:", dict(request.POST))
         errors  = {}
-        to_save = {}
+        to_save = []
+
+        # print("class_subject_groups: ", class_subject_groups)
+        # messages.error(request, f'{class_subject_groups}')
+        # return redirect(reverse('assessments:add_subject', args=[pk]))
+
 
         for group in class_subject_groups:
+            ac = group['ac']
+            print("GROUP AC:", ac, "| school_class:", ac.school_class, "| supported_class key:", ac.school_class.supported_class.key)
+
+
             for cs in group['subjects']:
                 subj     = cs.subject
                 key      = f'{group["ac"].school_class.supported_class.key}_{subj.code}'.lower()
                 passmark_raw = request.POST.get(f'passmark_{key}', '').strip()
 
-                # Skip if already linked
-                if subj.pk in already_linked_subject_pks:
+
+
+                if AssessmentSubject.objects.filter(
+                    assessment=assessment,
+                    assessment_class=ac.school_class,
+                    subject=subj
+                    ).exists():
                     continue
 
-                # Skip if passmark is empty — user left it blank, meaning not selected
+
                 if not passmark_raw:
-                    continue
-
-                # Skip duplicate subject from another class group
-                if subj.pk in to_save:
                     continue
 
                 passmark = _parse_pos_decimal(
@@ -572,11 +582,23 @@ def add_assessment_subject(request, pk):
                 notes = (request.POST.get(f'notes_{key}', '') or '').strip()[:200]
 
                 if passmark is not None:
-                    to_save[subj.pk] = {
+                    to_save.append({
+                        'ac':       ac,
                         'subject':  subj,
                         'passmark': passmark,
                         'notes':    notes,
-                    }
+                    })
+
+
+
+        # print("To Save: ", to_save)
+        # return redirect(reverse('assessments:add_subject', args=[pk]))
+
+
+        # print ('TO SAVE: ',to_save)
+        # messages.error(request, f'{to_save}')
+        # return redirect(reverse('assessments:add_subject', args=[pk]))
+
 
         if not to_save and not errors:
             messages.error(request, 'Please fill in a pass mark for at least one subject.')
@@ -595,11 +617,12 @@ def add_assessment_subject(request, pk):
             return render(request, 'assessments/add_assessment_subject.html', ctx)
 
         with transaction.atomic():
-            for item in to_save.values():
+            for item in to_save:                          # ← no .values()
                 AssessmentSubject.objects.get_or_create(
-                    assessment = assessment,
-                    subject    = item['subject'],
-                    defaults   = {
+                    assessment       = assessment,
+                    assessment_class = item['ac'].school_class,  # ← per class
+                    subject          = item['subject'],
+                    defaults={
                         'passmark': item['passmark'],
                         'notes':    item['notes'],
                     },
@@ -659,7 +682,7 @@ def add_assessment_total_marks(request, pk):
 
     if request.method == 'POST':
         errors  = {}
-        to_save = []   # list of { 'as_subj': AssessmentSubject, 'total': Decimal }
+        to_save = []
 
         for as_subj in assessment_subjects:
             field_key = f'total_mark_{as_subj.pk}'
@@ -670,24 +693,40 @@ def add_assessment_total_marks(request, pk):
                 field_key,
             )
             if total is not None:
-                to_save.append({'as_subj': as_subj, 'total': total})
+                # Total mark must be >= passmark
+                if as_subj.passmark and total < as_subj.passmark:
+                    errors[field_key] = (
+                        f'Total marks ({total}) cannot be less than the pass mark ({as_subj.passmark}).'
+                    )
+                else:
+                    to_save.append({'as_subj': as_subj, 'total': total})
+
+
+        # messages.error(request, f'{to_save}')
+        # return redirect(reverse('assessments:add_total_marks', args=[pk]))
+    
+
+
 
         if errors:
             messages.error(request, 'Please correct the highlighted errors.')
             ctx = {
-                'assessment':         assessment,
+                'assessment':          assessment,
                 'assessment_subjects': assessment_subjects,
-                'errors':             errors,
-                'post':               request.POST,
+                'errors':              errors,
+                'post':                request.POST,
             }
             return render(request, 'assessments/add_assessment_total_marks.html', ctx)
 
         with transaction.atomic():
             for item in to_save:
-                # Update the passmark field (which your model uses as "max marks")
-                # Replace 'passmark' with 'total_marks' if you add that field separately.
-                item['as_subj'].passmark = item['total']
-                item['as_subj'].save(update_fields=['passmark'])
+                AssessmentTotalMark.objects.get_or_create(
+                    assessment = assessment,
+                    subject    = item['as_subj'],
+                    defaults   = {
+                        'total_mark': item['total'],
+                    },
+                )
 
         messages.success(
             request,
@@ -747,9 +786,10 @@ def add_assessment_teacher(request, pk):
 
     # Build slot grid: one slot per (class, subject) pair
     # Each slot holds the candidate teachers for that pairing.
+
+
     slots = []
     for ac in assessment_classes:
-        # Teachers linked to this class
         class_teacher_links = (
             TeacherClass.objects
             .filter(school_class=ac.school_class, is_active=True)
@@ -757,8 +797,13 @@ def add_assessment_teacher(request, pk):
         )
         class_teacher_users = {tc.teacher for tc in class_teacher_links}
 
-        for as_subj in assessment_subjects:
-            # Teachers for this subject in this class
+        # ← Filter subjects for THIS class only, not all assessment subjects
+        class_subjects = AssessmentSubject.objects.filter(
+            assessment=assessment,
+            assessment_class=ac.school_class,
+        ).select_related('subject')
+
+        for as_subj in class_subjects:  # ← use class_subjects, not assessment_subjects
             subject_teacher_links = (
                 TeacherSubject.objects
                 .filter(
@@ -772,7 +817,6 @@ def add_assessment_teacher(request, pk):
                 if ts.teacher in class_teacher_users
             ]
 
-            # Fall back: any teacher linked to the class if no subject-specific found
             if not candidates:
                 candidates = list(class_teacher_users)
 
@@ -788,11 +832,17 @@ def add_assessment_teacher(request, pk):
                 'slot_key':   slot_key,
             })
 
+
+
     if request.method == 'POST':
         errors  = {}
         to_save = []
 
         for slot in slots:
+            print(type(slot['ac'].school_class), slot['ac'].school_class)
+            messages.error(request, f'{slot['ac'].school_class}')
+            
+
             field_key  = f'teacher_{slot["slot_key"]}'
             teacher_pk = (request.POST.get(field_key) or '').strip()
 
@@ -815,6 +865,10 @@ def add_assessment_teacher(request, pk):
                 'subject':      slot['as_subj'].subject,
                 'school_class': slot['ac'].school_class,
             })
+
+
+
+        # return redirect(reverse('assessments:add_teacher', args=[pk]))
 
         if errors:
             messages.error(request, 'Please correct the highlighted errors.')
@@ -1170,32 +1224,5 @@ def delete_student_performance(request, pk, perf_pk):
     })
 
 
-# =============================================================================
-# 14. Student Performance Detail
-# =============================================================================
 
-# @login_required
-# def student_performance_detail(request, pk, perf_pk):
-#     assessment  = get_object_or_404(Assessment, pk=pk)
-#     performance = get_object_or_404(
-#         AssessmentPerformance.objects.select_related(
-#             'student', 'subject', 'school_class',
-#             'entered_by', 'verified_by', 'assessment__term'
-#         ),
-#         pk=perf_pk,
-#         assessment=assessment,
-#     )
 
-#     # Try to find the passmark for this subject
-#     try:
-#         pass_mark = AssessmentPassMark.objects.select_related(
-#             'subject', 'set_by__user'
-#         ).get(assessment=assessment, subject=performance.subject)
-#     except AssessmentPassMark.DoesNotExist:
-#         pass_mark = None
-
-#     return render(request, 'assessments/student_performance_detail.html', {
-#         'assessment':  assessment,
-#         'performance': performance,
-#         'pass_mark':   pass_mark,
-#     })

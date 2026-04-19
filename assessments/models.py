@@ -199,12 +199,18 @@ class AssessmentSubject(TimeStampedModel):
                       Assessment, on_delete=models.CASCADE,
                       related_name='assessment_subjects'
                   )
+    assessment_class  = models.ForeignKey(
+                      SchoolSupportedClasses, on_delete=models.CASCADE,
+                      related_name='assessment_subject', null=True
+                  )
+    
     subject     = models.ForeignKey(
                       'academics.Subject', on_delete=models.CASCADE,
                       related_name='subject_assessment_links'
                   )
     passmark = models.DecimalField(max_digits=7, decimal_places=1,
                       help_text='Max marks for this subject in this assessment')
+    
 
     notes       = models.CharField(max_length=200, blank=True)
 
@@ -212,6 +218,8 @@ class AssessmentSubject(TimeStampedModel):
         verbose_name        = 'Assessment Subject'
         verbose_name_plural = 'Assessment Subjects'
         ordering            = ['assessment', ]
+
+        unique_together = ['assessment', 'assessment_class', 'subject']  # ← add assessment_class
 
     def __str__(self):
         return f"{self.assessment.title} | {self.subject.code} | Max: {self.passmark}"
@@ -251,7 +259,7 @@ class AssessmentTeacher(TimeStampedModel):
                         help_text='Subject this teacher is responsible for (marker / setter)'
                     )
     school_class  = models.ForeignKey(
-                        'academics.SchoolClass', on_delete=models.SET_NULL,
+                        SchoolSupportedClasses, on_delete=models.SET_NULL,
                         null=True, blank=True,
                         related_name='class_assessment_teachers',
                         help_text='Class this teacher handled (invigilator / class_teacher)'
@@ -298,29 +306,6 @@ class AssessmentTotalMark(TimeStampedModel):
     def __str__(self):
         return self.assessment.assessment_type
     
-
-
-
-
-
-
-    def get_absolute_pass_mark(self, total_marks):
-        """
-        Returns the passmark as a raw mark value.
-        Pass total_marks from AssessmentSubject.total_marks.
-        """
-        if self.pass_type == 'percentage':
-            return round((float(self.pass_value) / 100) * float(total_marks), 1)
-        return float(self.pass_value)
-
-    def __str__(self):
-        display  = f"{self.pass_value}%" if self.pass_type == 'percentage' else f"{self.pass_value} marks"
-        teacher  = self.set_by.user.get_full_name() if self.set_by else 'N/A'
-        return (
-            f"{self.assessment.title} | {self.subject.code} | "
-            f"Passmark: {display} | Set by: {teacher}"
-        )
-
 
 # =============================================================================
 # 6. ASSESSMENT PERFORMANCE  —  Per-student per-subject result

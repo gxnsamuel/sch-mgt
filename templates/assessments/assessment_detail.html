@@ -11,9 +11,7 @@
 
 {% block content %}
 
-{# ══════════════════════════════════════════════════════════════════
-   PAGE HEADER
-══════════════════════════════════════════════════════════════════ #}
+
 <div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
 
   <div>
@@ -98,9 +96,7 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════════════════════
-   PERFORMANCE SUMMARY STATS
-══════════════════════════════════════════════════════════════════ #}
+
 <div class="row g-3 mb-4">
   <div class="col-6 col-sm-4 col-lg-2">
     <div class="card border-0 bg-body-secondary h-100 text-center py-3">
@@ -143,9 +139,6 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════════════════════
-   ASSESSMENT INFO CARD
-══════════════════════════════════════════════════════════════════ #}
 <div class="card border mb-4">
   <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2">
     <span class="fw-semibold small text-uppercase text-muted tracking-wide">
@@ -291,9 +284,7 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════════════════════
-   SUBJECTS
-══════════════════════════════════════════════════════════════════ #}
+
 <div class="card border mb-4">
   <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2">
     <span class="fw-semibold small text-uppercase text-muted">
@@ -315,6 +306,7 @@
           <th class="ps-3">Subject</th>
           <th class="text-center">Pass Mark</th>
           <th>Notes</th>
+          <th>Class</th>
         </tr>
       </thead>
       <tbody>
@@ -332,6 +324,7 @@
             {% endif %}
           </td>
           <td class="text-muted">{{ asub.notes|default:"—"|truncatechars:60 }}</td>
+          <td>({{ asub.assessment_class.supported_class.key.upper }})&nbsp;&nbsp;{{ asub.assessment_class.supported_class.name.capitalize }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -349,9 +342,7 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════════════════════
-   TEACHERS
-══════════════════════════════════════════════════════════════════ #}
+{# ══════════════════════════════════════════════════════════════════TEACHERS══════════════════════════════════════════════════════════════════ #}
 <div class="card border mb-4">
   <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2">
     <span class="fw-semibold small text-uppercase text-muted">
@@ -394,7 +385,7 @@
           </td>
           <td>
             {% if at.school_class %}
-            {{ at.school_class.name }}
+              ({{at.school_class.supported_class.key.upper}})&nbsp;&nbsp;{{ at.school_class.supported_class.name }}
             {% else %}
             <span class="text-muted">—</span>
             {% endif %}
@@ -416,9 +407,7 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════════════════════
-   PERFORMANCE RECORDS
-══════════════════════════════════════════════════════════════════ #}
+{# ══════════════════════════════════════════════════════════════════PERFORMANCE RECORDS═════════════════════════════════════════════════════════════════ #}
 <div class="card border mb-4">
   <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-2 flex-wrap gap-2">
     <span class="fw-semibold small text-uppercase text-muted">
@@ -507,9 +496,7 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════════════════════
-   PAGE FOOTER META
-══════════════════════════════════════════════════════════════════ #}
+{# ══════════════════════════════════════════════════════════════════PAGE FOOTER META══════════════════════════════════════════════════════════════════ #}
 <div class="text-muted small d-flex gap-4 flex-wrap mt-1 pb-2 border-top pt-3">
   {% if assessment.created_by %}
   <span>

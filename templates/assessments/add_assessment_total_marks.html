@@ -1,5 +1,7 @@
 {% extends "base.html" %}
+
 {% load assessments_extras %}
+
 {% block title %}Set Total Marks — {{ assessment.title }}{% endblock %}
 
 {% block breadcrumb %}
@@ -46,7 +48,8 @@
         <thead class="table-light">
           <tr>
             <th class="ps-3" style="width:40%;">Subject</th>
-            <th style="width:30%;">
+            <th class="ps-3" style="width:20%;">Class</th>
+            <th style="width:20%;">
               Total Marks <span class="text-danger">*</span>
             </th>
             <th class="text-muted small pe-3">Current Pass Mark</th>
@@ -54,25 +57,34 @@
         </thead>
         <tbody>
           {% for as_subj in assessment_subjects %}
-          {% with field_key='total_mark_'|add:as_subj.pk|stringformat:"s" %}
+
+          {% dict_get post 'total_mark_' as_subj.pk as field_val %}
+          {% dict_get errors 'total_mark_' as_subj.pk as field_error %}
+
           <tr>
             <td class="ps-3">
               <span class="badge bg-dark font-monospace me-1">{{ as_subj.subject.code }}</span>
               <span class="fw-semibold">{{ as_subj.subject.name }}</span>
             </td>
+
+            <td class="ps-3">
+              <span class="badge bg-dark font-monospace me-1">{{ as_subj.assessment_class.supported_class.key|upper }}</span>
+              <span class="fw-semibold">{{ as_subj.assessment_class.supported_class.name }}</span>
+            </td>
+
             <td>
               <input type="number"
-                     name="{{ field_key }}"
-                     class="form-control form-control-sm
-                       {% if errors|default:'' %}{% if errors|getitem:field_key %}is-invalid{% endif %}{% endif %}"
-                     style="max-width: 120px;"
-                     value="{{ post|default:''|getitem:field_key|default:'' }}"
-                     min="1" step="0.5"
-                     placeholder="e.g. 100">
-              {% if errors|default:'' %}{% if errors|getitem:field_key %}
-              <div class="invalid-feedback d-block">{{ errors|getitem:field_key }}</div>
-              {% endif %}{% endif %}
+                    name="total_mark_{{ as_subj.pk }}"
+                    class="form-control form-control-sm {% if field_error %}is-invalid{% endif %}"
+                    style="max-width: 120px;"
+                    value="{{ field_val|default:'' }}"
+                    min="1" step="0.5"
+                    placeholder="e.g. 100">
+              {% if field_error %}
+              <div class="invalid-feedback d-block">{{ field_error }}</div>
+              {% endif %}
             </td>
+
             <td class="text-muted small pe-3">
               {% if as_subj.passmark %}
                 {{ as_subj.passmark }}
@@ -81,7 +93,7 @@
               {% endif %}
             </td>
           </tr>
-          {% endwith %}
+
           {% endfor %}
         </tbody>
       </table>
