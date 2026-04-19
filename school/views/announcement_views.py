@@ -28,7 +28,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from academics.models import SchoolClass
+from academics.models import SchoolClass, SchoolSupportedClasses
 from school.models import SchoolAnnouncement
 from school.utils.announcement_utils import (
     AUDIENCE_LABELS,
@@ -49,10 +49,12 @@ _PRIORITY_CHOICES  = list(PRIORITY_LABELS.items())
 
 def _get_form_lookups() -> dict:
     """Querysets every form template needs."""
+    supported_classes = SchoolSupportedClasses.objects.select_related('supported_class').all().order_by('supported_class__order')
+    for sc in supported_classes:
+        sc.display_name = sc.supported_class.name
+
     return {
-        'all_classes':      SchoolClass.objects.filter(
-                                is_active=True
-                            ).order_by('section', 'level', 'stream'),
+        'all_classes':      supported_classes,
         'audience_choices': _AUDIENCE_CHOICES,
         'priority_choices': _PRIORITY_CHOICES,
     }
@@ -128,8 +130,16 @@ def announcement_list(request):
         qs = qs.filter(is_published=True).filter(
             Q(expires_at__isnull=True) | Q(expires_at__gt=now)
         )
+    elif status_filter == 'inactive':
+        # Inactive = Either Expired or Draft
+        qs = qs.filter(
+            Q(is_published=False) | 
+            Q(is_published=True, expires_at__lt=now)
+        )
     elif status_filter == 'expired':
         qs = qs.filter(is_published=True, expires_at__lt=now)
+    elif status_filter == 'published':
+        qs = qs.filter(is_published=True)
     elif status_filter == 'draft':
         qs = qs.filter(is_published=False)
 
@@ -159,6 +169,10 @@ def announcement_list(request):
 
     stats = get_announcement_list_stats()
 
+    supported_classes = SchoolSupportedClasses.objects.select_related('supported_class').all().order_by('supported_class__order')
+    for sc in supported_classes:
+        sc.display_name = sc.supported_class.name
+
     context = {
         'announcements':    items,
         'page_obj':         page_obj,
@@ -172,9 +186,7 @@ def announcement_list(request):
         # choice lists for filter controls
         'audience_choices': _AUDIENCE_CHOICES,
         'priority_choices': _PRIORITY_CHOICES,
-        'all_classes':      SchoolClass.objects.filter(
-                                is_active=True
-                            ).order_by('section', 'level', 'stream'),
+        'all_classes':      supported_classes,
         'now':              now,
         **stats,
     }
