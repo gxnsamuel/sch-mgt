@@ -18,9 +18,10 @@ from school.views.requirement_views import (
     requirement_delete, requirement_duplicate, requirement_toggle_published,
 )
 from school.views.announcement_views import (
-    announcement_list, announcement_add, announcement_edit,
+    announcement_list, announcement_edit,
     announcement_delete, announcement_detail, announcement_toggle_published,
 )
+from .views import announcement_add
 from school.views.event_views import (
     event_list, event_add, event_edit,
     event_delete, event_detail, event_toggle_published,
